@@ -102,12 +102,14 @@
 ## 決定事項（2026-09-25）
 - データ配信: PMTiles（地形形状）+ islands.json（属性・出題ロジック用）
 - OSM 取得: Geofabrik 日本抽出 + osmium。陸地は osmdata の land polygons を使う
-- データ生成スクリプト: Node/TS（osmium・tippecanoe は CLI）
+- データ生成スクリプト: Node/TS（osmium・ogr2ogr (GDAL)・tippecanoe は CLI）。`pnpm data` で実行
 - 等高線: 地理院 DEM からクライアント生成（maplibre-contour）。フェーズ5でベクタタイル案と比較して最終確定
-- 難易度: 4段階（かんたん／ふつう／むずかしい／おに）。初期重み 面積0.5・知名度0.3・有人0.1・形状0.05・密集度0.05
+- 難易度: 4段階（かんたん／ふつう／むずかしい／おに）。初期重み 面積0.5・知名度0.3・有人0.1・形状0.05・密集度0.05。帯の比率は易しい順に 5/15/30/50%（暫定、`config/difficulty.json`）
 - ホスティング: GitHub Pages。PMTiles が 100MB 超なら Cloudflare R2。PMTiles は手元生成 → Release asset
 - ライセンス: コードは MIT、生成データは ODbL
 - 本州・北海道・九州・四国は出題対象外
 - 北方領土・竹島・尖閣諸島: データにあれば出題する（除外処理はしない）
+  - **現状、北方領土と竹島（島根県）はデータに入っていない**。Geofabrik の日本抽出が実効支配に沿った範囲のため。入っているのは尖閣諸島のみ（2026-09-26 確認、追加取得はしない方針）
+- 0.001km²（約30m四方）未満の島は出題対象外
 - ダークモード: 今回は入れない
 - ツール: pnpm（minimumReleaseAge 30日）、Biome、Vitest

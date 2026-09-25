@@ -10,10 +10,14 @@
     "preview": "vite preview",
     "test": "vitest run --passWithNoTests",
     "lint": "biome check .",
-    "format": "biome check --write ."
+    "format": "biome check --write .",
+    "data": "node scripts/data/pipeline.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",
+    "@turf/turf": "^7.4.0",
+    "@types/geojson": "^7946.0.16",
+    "@types/node": "^26.3.0",
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
