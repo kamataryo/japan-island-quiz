@@ -32,6 +32,33 @@ a {
   outline-offset: 2px;
 }
 
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.caption {
+  display: block;
+  color: var(--c-ink-sub);
+  font-size: 0.875rem;
+}
+
+.check {
+  display: inline-flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: var(--tap);
+  cursor: pointer;
+}
+
+.check input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--c-title);
+}
+
 /* ---- 古いウィンドウ風のパネル ---- */
 .window {
   border: 2px solid var(--c-btn-dark);
@@ -208,7 +235,9 @@ a {
   *,
   *::before,
   *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: 動きを減らす設定は、個別のスタイルより必ず優先させる */
     animation: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: 同上 */
     transition: none !important;
   }
 

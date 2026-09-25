@@ -1,0 +1,55 @@
+/* クイズ画面のレイアウト。スマホでは地図の下に選択肢を置き、親指が届く位置にする */
+.app {
+  display: flex;
+  flex-direction: column;
+  max-width: 64rem;
+  min-height: 100dvh;
+  margin: 0 auto;
+}
+
+.app__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.app__title h1 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.app__map {
+  height: 55dvh;
+  min-height: 14rem;
+  border-inline: 2px solid var(--c-btn-dark);
+}
+
+.app__panel {
+  flex: 1;
+}
+
+.app__panel h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+}
+
+.next {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.result-list {
+  padding-left: 1.5rem;
+}
+
+/* 帰属表示は常に読めるよう、地図の上でも紙色の背景にする */
+.maplibregl-ctrl-attrib.maplibregl-ctrl {
+  background: var(--c-paper);
+  color: var(--c-ink);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--c-link);
+}

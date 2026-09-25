@@ -21,5 +21,9 @@
     "typescript": "^7.0.2",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
+  },
+  "dependencies": {
+    "maplibre-gl": "^6.6.0",
+    "pmtiles": "^4.5.0"
   }
 }
