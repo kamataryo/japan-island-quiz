@@ -1,0 +1,45 @@
+/* 配色とフォント。コントラストの組み合わせは contrast.ts で検証している */
+:root {
+  /* 文字と紙 */
+  --c-ink: #1f1a14;
+  --c-ink-sub: #5c5040;
+  --c-paper: #f7f1e1;
+  --c-panel: #ebe3cf;
+  --c-link: #1c3f7a;
+
+  /* タイトルバー（古いウィンドウ風のグラデーション） */
+  --c-title: #1c3f7a;
+  --c-title-end: #3b6aa8;
+  --c-on-title: #ffffff;
+
+  /* ベベルボタン */
+  --c-btn-face: #e6dcc3;
+  --c-btn-light: #fffbef;
+  --c-btn-shadow: #8c7e62;
+  --c-btn-dark: #2e271c;
+  --c-focus: #1c3f7a;
+
+  /* 正誤（色だけに頼らず ○× の文字も併記する） */
+  --c-correct: #1d6b32;
+  --c-correct-bg: #dcefd6;
+  --c-wrong: #a3261b;
+  --c-wrong-bg: #f8ded6;
+
+  /* 地図（地図帳風） */
+  --c-sea: #b9dff0;
+  --c-land: #f4eccb;
+  --c-land-2: #e9dca6;
+  --c-land-3: #dcc583;
+  --c-land-4: #c9a866;
+  --c-coast: #56788c;
+  --c-contour: #9a6d42;
+  --c-highlight: #b3261e;
+  --c-highlight-fill: #ffd23f;
+
+  --font-retro: "DotGothic16", "Hiragino Sans", "Noto Sans JP", sans-serif;
+  --font-body:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP",
+    "Yu Gothic UI", "Meiryo", sans-serif;
+
+  --tap: 2.75rem; /* 44px */
+}

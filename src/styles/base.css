@@ -1,0 +1,219 @@
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--c-paper);
+  color: var(--c-ink);
+  font-family: var(--font-body);
+  line-height: 1.7;
+}
+
+h1,
+h2,
+h3,
+.retro {
+  font-family: var(--font-retro);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+a {
+  color: var(--c-link);
+}
+
+:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+/* ---- 古いウィンドウ風のパネル ---- */
+.window {
+  border: 2px solid var(--c-btn-dark);
+  background: var(--c-panel);
+  box-shadow: 4px 4px 0 var(--c-btn-shadow);
+}
+
+.window__title {
+  margin: 0;
+  padding: 0.25rem 0.75rem;
+  background: linear-gradient(90deg, var(--c-title), var(--c-title-end));
+  color: var(--c-on-title);
+  font-family: var(--font-retro);
+  font-size: 1rem;
+}
+
+.window__body {
+  padding: 1rem;
+}
+
+/* ---- ベベルボタン（押すとへこむ） ---- */
+.btn {
+  position: relative;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--c-btn-dark);
+  background: var(--c-btn-face);
+  color: var(--c-ink);
+  font: inherit;
+  cursor: pointer;
+  box-shadow:
+    inset 2px 2px 0 var(--c-btn-light),
+    inset -2px -2px 0 var(--c-btn-shadow);
+}
+
+.btn:hover {
+  background: var(--c-btn-light);
+}
+
+.btn:active,
+.btn[aria-pressed="true"] {
+  box-shadow:
+    inset 2px 2px 0 var(--c-btn-shadow),
+    inset -2px -2px 0 var(--c-btn-light);
+  transform: translate(1px, 1px);
+}
+
+/* 古い UI の「内側の点線」フォーカス。外側の太い枠線と併用して必ず見えるようにする */
+.btn:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px dotted var(--c-ink);
+  pointer-events: none;
+}
+
+.btn:disabled {
+  color: var(--c-ink-sub);
+  cursor: not-allowed;
+}
+
+/* ---- 選択肢 ---- */
+.choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.choice {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  font-size: 1.125rem;
+}
+
+.choice kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.75em;
+  border: 1px solid var(--c-btn-dark);
+  background: var(--c-paper);
+  font-family: var(--font-retro);
+  font-size: 0.875em;
+}
+
+.choice[data-result="correct"] {
+  border-color: var(--c-correct);
+  background: var(--c-correct-bg);
+  color: var(--c-correct);
+}
+
+.choice[data-result="wrong"] {
+  border-color: var(--c-wrong);
+  background: var(--c-wrong-bg);
+  color: var(--c-wrong);
+}
+
+.choice .mark {
+  margin-left: auto;
+  font-weight: 700;
+}
+
+/* ---- 正誤の表示 ---- */
+.feedback {
+  padding: 0.5rem 1rem;
+  border: 2px solid;
+  font-weight: 700;
+}
+
+.feedback--correct {
+  border-color: var(--c-correct);
+  background: var(--c-correct-bg);
+  color: var(--c-correct);
+}
+
+.feedback--wrong {
+  border-color: var(--c-wrong);
+  background: var(--c-wrong-bg);
+  color: var(--c-wrong);
+}
+
+/* ---- 切り替え（白地図／等高線など） ---- */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+}
+
+.segmented label {
+  display: inline-grid;
+  place-items: center;
+}
+
+.segmented input:checked + label {
+  box-shadow:
+    inset 2px 2px 0 var(--c-btn-shadow),
+    inset -2px -2px 0 var(--c-btn-light);
+  background: var(--c-panel);
+  font-weight: 700;
+}
+
+.segmented input:checked + label::before {
+  content: "● ";
+}
+
+.segmented input:focus-visible + label {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .btn:active,
+  .btn[aria-pressed="true"] {
+    transform: none;
+  }
+}
