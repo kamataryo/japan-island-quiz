@@ -62,7 +62,7 @@ pnpm data
 `main` への push（または Actions の手動実行）で Cloudflare Workers（workers.dev）にデプロイされます（`.github/workflows/deploy.yml`、設定は `wrangler.jsonc`）。
 静的ファイルは Workers の静的アセットとして配り、次の2つだけ Worker が処理します。
 
-- `/tiles/{z}/{x}/{y}.mvt`: R2 に置いた `base.pmtiles` からタイルを1枚ずつ返す（静的アセットは Range リクエストに対応していないため）
+- `/tiles/{版}/{z}/{x}/{y}.mvt`: R2 に置いた `base.pmtiles` からタイルを1枚ずつ返す（静的アセットは Range リクエストに対応していないため）。版は `meta.json` の `pmtilesSha256` の先頭12文字で、データを作り直すと URL が変わるので古いタイルがキャッシュから混ざらない
 - `/api/answers`: 島ごとの正答率の集計（D1）
 
 `base.pmtiles` は大きいのでリポジトリに入れず、`meta.json` に対応する Release（タグ `YYYY-MM-DD-{sha256 の先頭12桁}`）の asset から取って R2 に上げます。asset の sha256 が `meta.json` の `pmtilesSha256` と違うとデプロイは失敗します。

@@ -14,6 +14,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 import type { Island } from "../scripts/data/pipeline.ts";
 import { gsiToTerrarium } from "./dem.ts";
+import { TILES_VERSION } from "./tiles-version.ts";
 
 // MapLibre v6 は Worker を本体と同じ場所から import.meta.url 基準で読むが、
 // Vite の事前バンドルで場所がずれて 404 になり、エラーなしで止まる。依存ごとバンドルした Worker を明示する
@@ -73,7 +74,7 @@ function style(): StyleSpecification {
           ? { url: `pmtiles://${url("data/base.pmtiles")}` }
           : {
               // {z} などを URL() に通すとエスケープされるので、後ろに付ける
-              tiles: [`${url("tiles/")}{z}/{x}/{y}.mvt`],
+              tiles: [`${url(`tiles/${TILES_VERSION}/`)}{z}/{x}/{y}.mvt`],
               minzoom: 3,
               maxzoom: 12,
               // データのある範囲（scripts/data/pipeline.ts の CLIP_BBOX）。外側はリクエストしない
