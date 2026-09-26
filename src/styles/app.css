@@ -20,6 +20,13 @@
   font-size: 1.125rem;
 }
 
+/* 360px 幅の端末でもタイトルと進捗を1行に収める（文字を拡大したときは折り返してよい） */
+@media (max-width: 26rem) {
+  #progress {
+    font-size: 0.875rem;
+  }
+}
+
 /* 地図の高さ。スマホ幅では低くして、選択肢4つまで1画面に収める */
 :root {
   --map-h: max(55dvh, 14rem);

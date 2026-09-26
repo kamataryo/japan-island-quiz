@@ -228,7 +228,8 @@ async function main() {
       const choices = pickChoices(island, mode.choices, Math.random);
       const status = `${q + 1} / ${questions.length} 問目`;
       const showProgress = () => {
-        progress.textContent = `${status}・${mode.name}・正解 ${answers.filter((a) => a.choice === a.island).length}`;
+        // スマホ幅でもタイトルと1行に収まるよう詰める。区切りを「・」にすると「伊豆・小笠原」と紛れるので空白にする
+        progress.textContent = `${q + 1}/${questions.length}問 ${mode.name} 正解 ${answers.filter((a) => a.choice === a.island).length}`;
       };
       showProgress();
       // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
