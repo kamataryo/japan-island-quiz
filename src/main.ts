@@ -19,6 +19,7 @@ const $ = <T extends HTMLElement>(sel: string) =>
 const panel = $("#panel");
 const progress = $("#progress");
 const live = $("#live");
+const home = $<HTMLAnchorElement>("#home");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 type Answer = { island: Island; choice: Island };
@@ -145,6 +146,7 @@ async function main() {
 
   function start() {
     progress.textContent = "";
+    home.hidden = true;
     const buttons = (ms: Mode[]) =>
       ms
         .map((m) => {
@@ -169,6 +171,7 @@ async function main() {
   }
 
   function play(mode: Mode) {
+    home.hidden = false;
     collapseAttribution(map);
     const questions = pickQuestions(
       mode.questions,
@@ -332,6 +335,12 @@ async function main() {
     ask(0);
   }
 
+  // 読み込み直さずに最初の画面へ戻す。途中までの回答は送信済みなので、確認はしない
+  home.addEventListener("click", (e) => {
+    e.preventDefault();
+    scrollTo(0, 0);
+    start();
+  });
   start();
 }
 

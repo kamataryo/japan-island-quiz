@@ -221,3 +221,30 @@
 .pan-hint span {
   display: inline-block;
 }
+
+/*
+ * 出題中に最初の画面へ戻るリンク。誤って押さないよう控えめな文字リンクにし（タップ領域は WCAG 2.2 AA の最低限 24px）、
+ * ページの末尾の左下に置く。パネルの下にその分の余白を空ける
+ */
+.app {
+  position: relative;
+}
+
+.home {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 1rem;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+  color: var(--c-ink);
+  font-size: 0.875rem;
+}
+
+.home[hidden] {
+  display: none;
+}
+
+.app__panel {
+  padding-bottom: 2.5rem;
+}
