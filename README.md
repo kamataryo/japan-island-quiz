@@ -43,7 +43,7 @@ pnpm data
 - 特定の日付の OSM データで再現するには `PBF_URL=https://download.geofabrik.de/asia/japan-YYMMDD.osm.pbf pnpm data`
 - 取得日時・取得条件・件数は `public/data/meta.json` に記録されます
 - 出題対象外: 名前のない島、本州・北海道・九州・四国、0.001km² 未満の島、国外の島
-- **注意: 北方領土と竹島（島根県）はデータに含まれていません。** Geofabrik の日本抽出が実効支配に沿った範囲で作られているためです。尖閣諸島は含まれます
+- 北方領土と竹島（島根県）は Geofabrik の日本抽出（実効支配に沿った範囲）に入らないため、その島だけを Overpass API で一度取得して足しています（`data/cache/extra.osm`、約17MB。クエリは `scripts/data/pipeline.ts` の `EXTRA_QUERY`）。都道府県・市町村は日本政府の立場で付けます（尖閣諸島も同じ。`DISPUTED_AREAS`）
 
 ### 難易度の決め方
 

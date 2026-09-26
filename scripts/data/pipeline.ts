@@ -43,6 +43,15 @@ const OUT = "public/data";
 const UA =
   "japan-island-quiz/0.1 (https://github.com/kamataryo/japan-island-quiz)";
 const PBF_LATEST = "https://download.geofabrik.de/asia/japan-latest.osm.pbf";
+/**
+ * Geofabrik の日本抽出に入らない北方領土・竹島の島だけを Overpass で一度だけ取る（日本全体を取るより軽い）。
+ * 竹島は島ではなく群島（place=archipelago）のタグなので relation の ID で指定する
+ */
+const EXTRA_QUERY = `[out:xml][timeout:120];
+(nwr["place"~"^(island|islet)$"](43.2,145.4,45.6,148.9);relation(6646538););
+(._;>;);
+out;`;
+const EXTRA_URL = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(EXTRA_QUERY)}`;
 const LAND_URL =
   "https://osmdata.openstreetmap.de/download/land-polygons-complete-4326.zip";
 /** 日本の島（沖ノ鳥島〜択捉島、与那国島〜南鳥島）と周辺の文脈が入る範囲 */
@@ -60,15 +69,22 @@ const EXCLUDED_NAMES = new Set(["本州", "北海道", "九州", "四国"]);
 /** これより小さい島（約30m四方未満の岩）は画面で見分けられないので出題対象外 */
 const MIN_AREA_KM2 = 0.001;
 /**
- * 北方領土・竹島・尖閣諸島の範囲。OSM では実効支配側の行政区域に入っていることがあるので、
- * ここにある name:ja 付きの島は国外の行政区域内でも残す（都道府県は付けない）。
- * ただし Geofabrik の日本抽出には北方領土と竹島（島根県）が含まれないため、現状入るのは尖閣諸島だけ
+ * 北方領土・竹島・尖閣諸島の範囲と、日本政府の立場での都道府県・市町村。
+ * OSM では日本の行政区域に入っていないので、ここにある name:ja 付きの島は国外の行政区域内でも残し、都道府県・市町村はこの表で付ける。
+ * 上から順に代表点が入る範囲を使う。北方領土と竹島は Geofabrik の日本抽出に入らないので EXTRA_QUERY で足す
  */
-const DISPUTED_BBOXES: BBox[] = [
-  [145.4, 43.2, 148.9, 45.6],
-  [131.8, 37.2, 131.95, 37.3],
-  [123.4, 25.6, 124.7, 26.0],
+const DISPUTED_AREAS: { bbox: BBox; pref: string; city?: string }[] = [
+  { bbox: [145.8, 43.3, 146.5, 43.68], pref: "北海道", city: "根室市" }, // 歯舞群島
+  { bbox: [146.6, 43.6, 147.0, 43.9], pref: "北海道", city: "色丹村" },
+  // 国後島・択捉島。周りの小島は村の境界が分からないので市町村を付けない（島そのものは DISPUTED_CITIES）
+  { bbox: [145.4, 43.2, 148.9, 45.6], pref: "北海道" },
+  { bbox: [131.8, 37.2, 131.95, 37.3], pref: "島根県", city: "隠岐の島町" },
+  { bbox: [123.4, 25.6, 124.7, 26.0], pref: "沖縄県", city: "石垣市" },
 ];
+const DISPUTED_CITIES: Record<string, string[]> = {
+  国後島: ["泊村", "留夜別村"],
+  択捉島: ["留別村", "紗那村", "蘂取村"],
+};
 const PREFECTURES = new Set(
   (
     "北海道 青森県 岩手県 宮城県 秋田県 山形県 福島県 茨城県 栃木県 群馬県 埼玉県 千葉県 東京都 神奈川県 " +
@@ -77,7 +93,7 @@ const PREFECTURES = new Set(
     "熊本県 大分県 宮崎県 鹿児島県 沖縄県"
   ).split(" "),
 );
-/** これより小さい水域（ため池など）はタイルに入れない。PMTiles を Workers の上限 25MiB 未満に収めるためでもある */
+/** これより小さい水域（ため池など）はタイルに入れない */
 const WATER_MIN_KM2 = 0.05;
 
 /**
@@ -224,6 +240,10 @@ async function* readSeq(path: string): AsyncGenerator<Feature> {
   }
 }
 
+async function* concatSeq(...paths: string[]): AsyncGenerator<Feature> {
+  for (const path of paths) yield* readSeq(path);
+}
+
 // ---- 空間処理 ----
 
 const isArea = (f: Feature): f is Area =>
@@ -293,6 +313,8 @@ async function main() {
   const pbfSource = await ensureSource("pbf", pbfUrl, pbf);
   const landZip = `${CACHE}/land-polygons-complete-4326.zip`;
   const landSource = await ensureSource("land", LAND_URL, landZip);
+  const extraOsm = `${CACHE}/extra.osm`;
+  const extraSource = await ensureSource("extra", EXTRA_URL, extraOsm);
   const osmTimestamp = run(
     "osmium",
     ["fileinfo", "-g", "header.option.osmosis_replication_timestamp", pbf],
@@ -347,6 +369,18 @@ async function main() {
     ]);
     renameSync(`${features}.tmp`, features);
   }
+  const extraFeatures = `${CACHE}/extra.geojsonseq`;
+  run("osmium", [
+    "export",
+    extraOsm,
+    "-c",
+    "scripts/data/osmium-export.json",
+    "-f",
+    "geojsonseq",
+    "-o",
+    extraFeatures,
+    "--overwrite",
+  ]);
 
   // 4. 仕分け（水域はそのままタイル用に書き出す）
   const water = createWriteStream(`${CACHE}/water.geojsonseq`);
@@ -354,10 +388,19 @@ async function main() {
   const nodeIslands: { id: string; tags: Tags; p: [number, number] }[] = [];
   const prefs: Admin[] = [];
   const cities: Admin[] = [];
-  for await (const f of readSeq(features)) {
+  // extra は日本抽出と範囲が重なる（根室付近の島など）ので、先に読んだ日本抽出の方を使う
+  const seen = new Set<string>();
+  for await (const f of concatSeq(features, extraFeatures)) {
     const tags = (f.properties ?? {}) as Tags;
     const id = `${String(tags["@type"])[0]}${tags["@id"]}`;
-    if (tags.place === "island" || tags.place === "islet") {
+    if (seen.has(id)) continue;
+    seen.add(id);
+    // archipelago は extra の竹島だけ
+    if (
+      tags.place === "island" ||
+      tags.place === "islet" ||
+      tags.place === "archipelago"
+    ) {
       if (f.geometry.type === "Point")
         nodeIslands.push({
           id,
@@ -465,9 +508,10 @@ async function main() {
     }
     const b = bbox(c.f);
     const admins = adminsOf(c.f, b, prefs);
-    const islandPrefs = admins.filter((n) => PREFECTURES.has(n));
+    let islandPrefs = admins.filter((n) => PREFECTURES.has(n));
+    let islandCities = adminsOf(c.f, b, cities);
     if (islandPrefs.length === 0) {
-      const disputed = DISPUTED_BBOXES.some((b) => inBBox(c.p, b));
+      const disputed = DISPUTED_AREAS.find((d) => inBBox(c.p, d.bbox));
       if (!disputed || !attrs.nameJa) {
         const reason =
           admins.length > 0
@@ -478,12 +522,15 @@ async function main() {
         dropped.push({ id: c.id, name: attrs.name, reason });
         continue;
       }
+      islandPrefs = [disputed.pref];
+      islandCities =
+        DISPUTED_CITIES[attrs.name] ?? (disputed.city ? [disputed.city] : []);
     }
     const island = {
       id: c.id,
       ...attrs,
       prefs: islandPrefs,
-      cities: adminsOf(c.f, b, cities),
+      cities: islandCities,
       areaKm2,
       bbox: b,
       center: c.p,
@@ -585,10 +632,12 @@ async function main() {
     sources: {
       osm: pbfSource,
       landPolygons: landSource,
+      extra: extraSource,
       wikidata: "https://query.wikidata.org/sparql",
     },
     conditions: {
       osmiumFilter: OSMIUM_FILTER,
+      extraQuery: EXTRA_QUERY,
       clipBBox: CLIP_BBOX,
       mainlandKm2: MAINLAND_KM2,
       excludedNames: [...EXCLUDED_NAMES],
