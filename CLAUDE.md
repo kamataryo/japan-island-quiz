@@ -110,7 +110,7 @@
 - 等高線: 地理院の最適化ベクトルタイル（`optimal_bvmap-v1.pmtiles`、試験公開）の `Cntr` レイヤーを直接使う（2026-09-26 決定。DEM からの生成より通信量が少なく線もきれい。URL が変わったら直す）。z9 未満には等高線がない
 - 陰影: 地理院 DEM（`dem_png`、DEM10B）を `gsidem://` プロトコルで terrarium 形式に変換し、hillshade レイヤーで描く（地理院形式の無効値・負の値は MapLibre の custom エンコーディングで扱えないため）
 - 難易度: 4段階（かんたん／ふつう／むずい／おに。「むずかしい」はスマホの2列表示で折り返すので短くした）。重み 面積0.4・知名度0.5・有人0.05・形状0.025・密集度0.025、帯の比率は易しい順に 2/8/30/60%（2026-09-26 に「かんたん」を易しく調整。`config/difficulty.json`）。人口データは一部の島にしかないので有人の重みは小さくしている
-- ホスティング: Cloudflare Workers（workers.dev、2026-09-26 に GitHub Pages から移行）。静的ファイルは Workers の静的アセット。base.pmtiles は R2 に置き、Worker が `/tiles/{z}/{x}/{y}.mvt` として1枚ずつ返す（静的アセットは Range リクエストに対応しておらず PMTiles を直接読めないため。z/x/y にするのはブラウザにキャッシュさせるため）。タイル1枚ごとに Worker の無料枠（1日10万リクエスト）を使うので、出題時の地図の移動はアニメーションしない（経路のタイルを読まないように。移動の向きがヒントになるのも防ぐ）。vite dev では public/data の PMTiles を直接読む。PMTiles は手元生成 → Release asset。main への push で Actions が最新の Release から base.pmtiles を取って R2 に上げ、D1 のマイグレーションとデプロイを行う
+- ホスティング: Cloudflare Workers（https://japan-island-quiz.kamataryo.workers.dev/ 、2026-09-26 に GitHub Pages から移行）。静的ファイルは Workers の静的アセット。base.pmtiles は R2 に置き、Worker が `/tiles/{z}/{x}/{y}.mvt` として1枚ずつ返す（静的アセットは Range リクエストに対応しておらず PMTiles を直接読めないため。z/x/y にするのはブラウザにキャッシュさせるため）。タイル1枚ごとに Worker の無料枠（1日10万リクエスト）を使うので、出題時の地図の移動はアニメーションしない（経路のタイルを読まないように。移動の向きがヒントになるのも防ぐ）。vite dev では public/data の PMTiles を直接読む。PMTiles は手元生成 → Release asset。main への push で Actions が最新の Release から base.pmtiles を取って R2 に上げ、D1 のマイグレーションとデプロイを行う
 - 島別の正答率（2026-09-26）: Cloudflare Workers（workers.dev）+ D1 で集計する。回答ごとに `POST /api/answers` を送り、答え合わせで正解の島の正答率と総回答数を出す。集計できなくてもクイズは続けられる。IP ごとのレート制限あり（Workers の Rate Limiting バインディング）
 - ライセンス: コードは MIT、生成データは ODbL
 - 本州・北海道・九州・四国は出題対象外
