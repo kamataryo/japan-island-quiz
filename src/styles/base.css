@@ -94,8 +94,11 @@ a {
     inset -2px -2px 0 var(--c-btn-shadow);
 }
 
-.btn:hover {
-  background: var(--c-btn-light);
+/* タッチ端末ではタップ後も :hover が残り、画面が切り替わって同じ位置に来たボタンが明るく見えてしまうので、マウスのときだけにする */
+@media (hover: hover) {
+  .btn:hover {
+    background: var(--c-btn-light);
+  }
 }
 
 .btn:active,
