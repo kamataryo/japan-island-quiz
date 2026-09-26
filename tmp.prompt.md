@@ -1,46 +1,31 @@
-# 継続用プロンプト: 日本の島クイズ フェーズ5（地形表現）
+# 継続用プロンプト: 日本の島クイズ フェーズ6（仕上げ）
 
-CLAUDE.md を読んで要件と決定事項を把握してから、フェーズ5に入ってください。
-フェーズ1〜4は完了してコミット済みです（白地図モードで10問遊べる状態）。
+CLAUDE.md を読んで要件と決定事項を把握してから、作業に入ってください。
+フェーズ1〜5は完了しています（常に陰影・等高線ありの地図で10問遊べる状態）。
 
-## フェーズ5でやること（CLAUDE.md「地形表現」より）
-- 国土地理院の標高タイル（DEM）から、陰影（MapLibre の hillshade レイヤー）と等高線（maplibre-contour 等でクライアント生成）を追加する
-- 地理院 DEM は独自エンコーディング。**実装前に、現在の URL・形式・利用規約（出典表示）を公式情報で確認する**
-- 決定事項: 等高線は DEM からクライアント生成。ただしフェーズ5で地理院ベクタタイルの等高線案と比較して、結果を見せてから最終確定する
-- 「白地図」と「等高線あり」を切り替えられるようにする（スタイルガイドの `.segmented` を使う想定）
-- 陸・海岸線・ハイライトは OSM のまま。地理院の海岸線は重ねない
-- 地理院タイルの出典を表示する
-- 配色トークン（`src/styles/tokens.css`）には、等高線（`--c-contour`）と段彩（`--c-land-2`〜`--c-land-4`）が定義済み。段彩の採否も検討する
-- 陰影と等高線を重ねても、出題中の島のハイライト（黄色の塗り＋赤い太線）が埋もれないこと
+## 状況（2026-09-26 時点）
+- 等高線は地理院の最適化ベクトルタイル（PMTiles、`Cntr` レイヤー、z9〜）、陰影は地理院 DEM を `gsidem://` で terrarium に変換して hillshade。どちらも地図の load 後に `addTerrain()` で追加（読めなくてもクイズは続く）
+- 回答後に Wikipedia（`islands.json` の `wikipedia` に記事名。日本語版に記事がある島のみ）と Google マップ（代表点の座標）のリンクを出す
+- 結果表の島名を押すとその島へ地図が移動する
+- `window.__map` で MapLibre の Map を露出（デバッグ用、本番でも可とユーザー確認済み）
+- README のクレジット・ライセンスは整理済み。`vite.config.ts` の `build.license` で `dist/licenses.md` を出力
+- `pnpm data` は取得済みの OSM PBF を使い続ける（消したときだけ再取得）
+- OGP・アイコンはユーザーが別途進めている（`tmp.ogp.prompt.md` で別の Claude にスクショを依頼）
 
-進め方: 実装方針（等高線の生成方法の比較を含む）を先に提示して承認を得る。フェーズの終わりに、成果物と確認してほしい点を報告して止まる。
+## 残課題（ユーザーと相談して優先順を決める）
+- **出題時のズーム**: `questionBounds` の `minContextKm = 40` のため、スマホでは出題時にほぼ z8.5 になり、z9 からの等高線がほとんど見えない。minZoom（=5、データ範囲の端を見せないためのもの）とは別の話。ユーザーは「別タスクで考える」と保留中
+- 使い勝手の作り込み（文言・配置・結果画面）。誤答の島へ移動したとき正解の島も同時に表示するか
+- スマホ対応とアクセシビリティの確認（CLAUDE.md「必ず守ること」の検証。陰影を重ねた陸の上で赤い輪郭のコントラスト 3:1 を保てているか）
+- パフォーマンス: tippecanoe の設定（ズームごとの簡略化・間引き）が未調整。`base.pmtiles` は 30MB（Range リクエストで部分取得なので初回に全部は落とさない）
+- DotGothic16 の自前配信（OFL なので可。サブセット化するなら意味がある）
+- OGP・favicon の組み込み（素材はユーザーが用意中）
+- デプロイ: GitHub Pages（Range リクエスト対応を確認済み。PMTiles 30MB は同梱可）。base path と Actions のワークフロー。PMTiles の扱い（Release asset から取り込むか等）はユーザーと相談
 
 ## 実行環境の制約（重要）
-- Claude の Bash は Linux コンテナで動くが、`node_modules` はユーザーの macOS で入れたもの。そのため **Vite・Vitest・Biome・tsc（TypeScript 7 はネイティブバイナリ）はこちらでは動かない**。`pnpm test` / `lint` / `format` / `build` / `dev` はユーザーに実行してもらう
-- 純粋な JS のパッケージ（turf, pmtiles など）は `node` で直接動かせる（Node 24 は .ts の型を剥がして直接実行できる）
+- Claude の Bash は Linux コンテナで動くが、`node_modules` はユーザーの macOS で入れたもの。そのため **Vite・Vitest・Biome・tsc はこちらでは動かない**。`pnpm test` / `lint` / `format` / `build` / `dev` はユーザーに実行してもらう
+- 純粋な JS のパッケージや src の純粋関数は `node` で直接動かせる（Node 24 は .ts の型を剥がして直接実行できる）
 - osmium / ogr2ogr / tippecanoe はこちらにない。`pnpm data` はユーザーが実行する
-- ユーザーが起動した開発サーバーには、こちらから `curl -H "Host: localhost:5173" http://host.orb.internal:5173/...` で届く（Host ヘッダーがないと 403）
-- パッケージの追加はユーザーに `pnpm add ...` を依頼する（minimumReleaseAge 30日が設定済み）
+- ユーザーが起動した開発サーバーには `curl -H "Host: localhost:5173" http://host.orb.internal:5173/...` で届く
+- パッケージの追加はユーザーに `pnpm add ...` を依頼する（minimumReleaseAge 30日）
 - コードを書いたあとは `pnpm format` が必要になることが多い（Biome の行幅は 80）
-
-## これまでの知見
-- **MapLibre GL JS は v6.6.0**。v6 は Worker を `import.meta.url` 基準で読み込むため、Vite の事前バンドルで 404 になり、エラーなしで止まる。`src/map.ts` で `maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url` を `setWorkerUrl` に渡して回避済み。v5 の知識のまま書かず、`node_modules/maplibre-gl/src` を確認すること（hillshade の DEM エンコーディング指定、`addProtocol` などの API も同様）
-- pmtiles は v4.5.0、Vite は v8、Vitest は v4、TypeScript は v7
-- PMTiles は z3〜z12。レイヤーは land / water / islands（islands は出題対象の島のみ、`id` 属性あり）
-- 地図スタイルは `src/map.ts` の `style()` で自前構築。色は CSS 変数から読む。地名ラベルは一切出さない
-- 地図の minZoom は 3、maxZoom は 16
-- 北方領土と竹島（島根県）は Geofabrik の抽出に含まれないのでデータにない（ユーザーの判断で追加取得しない）
-
-## 主なファイル
-- `src/map.ts`: 地図の作成・スタイル・出題中の島のハイライト・極小の島のマーカー
-- `src/main.ts`: 画面の流れ（難易度選択 → 10問 → 結果表）、回答後に選択肢を押すとその島を表示
-- `src/quiz/`: 出題・選択肢・ズームの純粋関数とテスト
-- `src/styles/`: tokens.css（配色）、base.css（共通部品）、app.css（クイズ画面）、contrast.ts（コントラスト検証の組み合わせ。テストあり）
-- `styleguide.html`: スタイルガイド（開発サーバーの /styleguide.html）
-- `scripts/data/`: データ生成パイプライン（`pnpm data`）、`config/difficulty.json`
-
-## フェーズ6に持ち越し中のメモ
-- UI の細部（文言・配置・結果画面）のフィードバックは、フェーズ6でまとめて対応する方針
-- DotGothic16 は今 Google Fonts から読み込んでいる。自前で配信するかはフェーズ6で決める
-- tippecanoe の設定（ズームごとの簡略化・間引き）は未調整
-- 回答後に誤答の島へ移動したとき、正解の島も同時に表示するかは未確認
+- MapLibre GL JS は v6.6.0。v5 の知識で書かず `node_modules/maplibre-gl/src` を確認する

@@ -57,6 +57,22 @@ pnpm data
 | 形のユニークさ（1 − 凸包充填率 × 凸包の円形度） | 特徴的 |
 | 周辺の密集度（半径内にある面積が近い島の数） | 少ない |
 
+## デプロイ
+
+`main` への push（または Actions の手動実行）で GitHub Pages にデプロイされます（`.github/workflows/deploy.yml`）。
+`base.pmtiles` は大きいのでリポジトリに入れず、**最新の Release** の asset から取り込みます。
+
+初回だけ、リポジトリの Settings → Pages で Source を「GitHub Actions」にしてください。
+
+データを作り直したら、`islands.json` と `base.pmtiles` の組み合わせがずれないよう、コミットと同時に Release を作ります（`islands.json` の島 ID と PMTiles の `id` 属性で出題中の島をハイライトしているため）。
+
+```sh
+pnpm data
+git commit ...   # public/data/islands.json, meta.json
+gh release create data-YYYY-MM-DD public/data/base.pmtiles
+git push
+```
+
 ## ライセンス
 
 - ソースコード: [MIT](./LICENSE)
