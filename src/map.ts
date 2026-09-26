@@ -319,8 +319,9 @@ export function showPanHint(map: MapLibreMap): void {
   const hint = document.createElement("div");
   hint.className = "pan-hint";
   hint.setAttribute("aria-hidden", "true");
+  // 語の途中で折り返さないよう、まとまりごとに span で包む
   hint.innerHTML =
-    "地図はドラッグで動かせます<br>＋−・ピンチ・ホイールで拡大縮小";
+    "<span>地図はドラッグで</span><span>動かせます</span><br><span>＋−・ピンチ・ホイールで</span><span>拡大縮小</span>";
   map.getContainer().append(hint);
   map.once("movestart", () => hint.remove());
 }
