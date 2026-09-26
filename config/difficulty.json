@@ -2,7 +2,7 @@
   "weights": {
     "area": 0.4,
     "fame": 0.5,
-    "inhabited": 0.05,
+    "inhabited": 0,
     "shape": 0.025,
     "density": 0.025
   },
