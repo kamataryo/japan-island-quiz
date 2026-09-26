@@ -24,6 +24,21 @@
       #panel table {
         border-collapse: collapse;
       }
+      #panel {
+        max-height: calc(100dvh - 1rem);
+        overflow: auto;
+      }
+      .slider {
+        display: grid;
+        grid-template-columns: 4em 8em 3em;
+        align-items: center;
+        gap: 0.25rem;
+      }
+      #json {
+        max-width: 16em;
+        font-size: 0.75rem;
+        overflow-wrap: anywhere;
+      }
       #panel td {
         padding: 0 0.5rem 0 0;
         text-align: right;
@@ -34,6 +49,14 @@
     <div id="panel">
       <label>モード <select id="mode"></select></label>
       <div id="stats"></div>
+      <details>
+        <summary>難易度の調整（試すだけ・保存されません）</summary>
+        <p>重み</p>
+        <div id="weights"></div>
+        <p>帯の比率（合計で割って使う）</p>
+        <div id="fractions"></div>
+        <code id="json"></code>
+      </details>
     </div>
     <div id="map"></div>
     <script type="module" src="/src/debug.ts"></script>
