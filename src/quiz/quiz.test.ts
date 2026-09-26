@@ -4,6 +4,7 @@ import {
   levenshtein,
   nameSimilarity,
   pickChoices,
+  sameName,
   stripSuffix,
 } from "./choices.ts";
 import { inPolygon, islandsIn, pickQuestions } from "./game.ts";
@@ -96,6 +97,21 @@ describe("名前の比較", () => {
       nameSimilarity(kuro, { name: "久留島", yomi: "くるしま" }),
     ).toBeGreaterThanOrEqual(0.5);
   });
+  it("表記ゆれやかな書きの同じ読みは同名とみなす", () => {
+    const same = (a: string, b: string, ya?: string, yb?: string) =>
+      sameName({ name: a, yomi: ya }, { name: b, yomi: yb });
+    expect(same("沖ノ島", "沖之島")).toBe(true);
+    expect(same("沖の島", "沖ノ島")).toBe(true);
+    expect(same("竹ケ島", "竹ヶ島")).toBe(true);
+    expect(same("中嶋", "中島")).toBe(true);
+    expect(same("龍宮島", "竜宮島")).toBe(true);
+    expect(same("三つ子島", "三ツ子島")).toBe(true);
+    expect(same("タコ島", "蛸島", "たこしま", "たこじま")).toBe(true);
+    expect(same("猪ノ子島", "猪子島", "いのこしま", "いのこしま")).toBe(true);
+    // 漢字だけなら読みが同じでも見分けられる
+    expect(same("高島", "鷹島", "たかしま", "たかしま")).toBe(false);
+    expect(same("沖ノ島", "沖ノ小島")).toBe(false);
+  });
 });
 
 describe("pickChoices", () => {
@@ -124,6 +140,45 @@ describe("pickChoices", () => {
       expect(new Set(cs.map((c) => c.name)).size).toBe(4);
       expect(cs.filter((c) => c.name === "大島")).toEqual([answer]);
     }
+  });
+
+  it("表記ゆれの同名の島を入れない", () => {
+    const oki = island({ name: "沖ノ島", center: [130, 33] });
+    const pool2 = [
+      oki,
+      island({ name: "沖之島", center: [130, 33.01] }),
+      island({ name: "沖の島", center: [130, 33.02] }),
+      island({ name: "沖ノ小島", center: [130.01, 33.02] }),
+      island({ name: "沖野小島", center: [130.02, 33.02] }),
+      ...Array.from({ length: 5 }, () => island({ center: [130.1, 33] })),
+    ];
+    for (let seed = 1; seed < 50; seed++) {
+      const cs = pickChoices(oki, pool2, rng(seed));
+      expect(cs).toHaveLength(4);
+      for (const a of cs)
+        for (const b of cs) if (a !== b) expect(sameName(a, b)).toBe(false);
+    }
+  });
+
+  it("名前の似た組に正解が入るとは限らない", () => {
+    // 正解とだけ名前が似た島、正解の近くの島とだけ名前が似た島を用意する
+    const ans = island({ name: "黒島", center: [130, 33] });
+    const pool2 = [
+      ans,
+      island({ name: "黒髪島", center: [135, 35] }),
+      island({ name: "白石島", center: [130.01, 33] }),
+      island({ name: "白木島", center: [135, 35] }),
+      ...Array.from({ length: 10 }, (_, i) =>
+        island({ name: `${"甲乙丙丁戊己庚辛壬癸"[i]}岩`, center: [131, 34] }),
+      ),
+    ];
+    const kinds = { answer: 0, dummy: 0 };
+    for (let seed = 1; seed < 400; seed++) {
+      const names = pickChoices(ans, pool2, rng(seed)).map((c) => c.name);
+      if (names.includes("黒髪島")) kinds.answer++;
+      if (names.includes("白石島") && names.includes("白木島")) kinds.dummy++;
+    }
+    expect(kinds.dummy).toBeGreaterThan(kinds.answer * 0.5);
   });
 
   it("候補が少なくても落ちない", () => {
