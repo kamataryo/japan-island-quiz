@@ -88,8 +88,16 @@
 
 .links a {
   display: inline-flex;
+  gap: 0.25em;
   align-items: center;
   min-height: 1.5rem;
+}
+
+/* 新しいタブで開くアイコン。文字の大きさに合わせる */
+.external {
+  flex: none;
+  width: 1em;
+  height: 1em;
 }
 
 .next {

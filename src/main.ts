@@ -49,10 +49,9 @@ function formatArea(km2: number): string {
   return `約${Math.round(km2 * 1e6).toLocaleString("ja-JP")}m²`;
 }
 
-/** 答え合わせで出す島の詳細（読み・都道府県・面積・人口） */
-function describe(x: Island): string {
+/** 答え合わせで出す島の詳細（都道府県・面積・人口） */
+function facts(x: Island): string {
   return [
-    x.yomi && `読み: ${x.yomi}`,
     x.pref,
     `面積 ${formatArea(x.areaKm2)}`,
     x.population && `人口 ${x.population.toLocaleString("ja-JP")}人`,
@@ -61,7 +60,13 @@ function describe(x: Island): string {
     .join("・");
 }
 
-const newTab = `<span class="visually-hidden">（新しいタブで開く）</span>`;
+/** 読み上げ用の島の詳細（読み・都道府県・面積・人口） */
+function describe(x: Island): string {
+  return x.yomi ? `読み: ${x.yomi}・${facts(x)}` : facts(x);
+}
+
+/** 新しいタブで開くリンクの印（四角から右上へ矢印が出るアイコン）と、読み上げ用の説明 */
+const newTab = `<svg class="external" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M7 3H3v10h10V9M9 2h5v5M14 2 7 9"/></svg><span class="visually-hidden">（新しいタブで開く）</span>`;
 
 /** 地図に表示中の島の説明と、外部サイトへのリンク */
 function viewing(x: Island): string {
@@ -72,10 +77,10 @@ function viewing(x: Island): string {
     x.wikipedia &&
     `https://ja.wikipedia.org/wiki/${encodeURIComponent(x.wikipedia)}`;
   return `
-    <p>${esc(`地図に表示中: ${x.name}（${describe(x)}）`)}</p>
+    <p>${esc(x.name)}${x.yomi ? `<small>（${esc(x.yomi)}）</small>` : ""}・${esc(facts(x))}</p>
     <p class="row links">
-      ${wiki ? `<a href="${esc(wiki)}" target="_blank" rel="noopener">Wikipedia「${esc(x.wikipedia ?? "")}」↗${newTab}</a>` : ""}
-      <a href="${esc(gmap)}" target="_blank" rel="noopener">Google マップ ↗${newTab}</a>
+      ${wiki ? `<a href="${esc(wiki)}" target="_blank" rel="noopener">Wikipedia「${esc(x.wikipedia ?? "")}」${newTab}</a>` : ""}
+      <a href="${esc(gmap)}" target="_blank" rel="noopener">Google マップ${newTab}</a>
     </p>`;
 }
 
