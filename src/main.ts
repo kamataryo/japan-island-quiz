@@ -1,14 +1,28 @@
 import "./styles/base.css";
 import "./styles/app.css";
 import config from "../config/difficulty.json";
+import regions from "../config/regions.json";
 import type { Island } from "../scripts/data/pipeline.ts";
 import { createMap, showIsland } from "./map.ts";
 import { pickChoices } from "./quiz/choices.ts";
-import { pickQuestions } from "./quiz/game.ts";
+import { islandsIn, pickQuestions } from "./quiz/game.ts";
 import { questionBounds } from "./quiz/zoom.ts";
 
 const QUESTIONS = 10;
-const BANDS = config.bands.map((b) => b.name);
+
+/** 遊び方（難易度帯か地域）。questions から出題し、choices から選択肢を作る */
+type Mode = {
+  name: string;
+  questions: Island[];
+  choices: Island[];
+  weight?: (x: Island) => number;
+};
+
+/**
+ * 地域モードは帯を混ぜて出すので、均等だと小さな岩ばかりになる。面積^0.25 で大きい島を出やすくする
+ * （瀬戸内海で 1ゲームの内訳が おおよそ かんたん0.4・ふつう2.8・むずい4.7・おに2.0 問になる）
+ */
+const regionWeight = (x: Island) => x.areaKm2 ** 0.25;
 
 const $ = <T extends HTMLElement>(sel: string) =>
   document.querySelector(sel) as T;
@@ -102,35 +116,58 @@ async function main() {
       !reduceMotion.matches,
     );
 
+  const bands: Mode[] = config.bands.map((b, i) => ({
+    name: b.name,
+    questions: islands.filter((x) => x.band === i),
+    choices: islands,
+  }));
+  // 地域モードは難易度を問わず出題し、選択肢も地域内の島から作る
+  // （外の島が混ざると、それだけで不正解と分かってしまうため）
+  const areas: Mode[] = regions.map((r) => {
+    const xs = islandsIn(islands, r.polygon);
+    return { name: r.name, questions: xs, choices: xs, weight: regionWeight };
+  });
+  const modes = [...bands, ...areas];
+
   function start() {
     progress.textContent = "";
+    const buttons = (ms: Mode[]) =>
+      ms
+        .map((m) => {
+          const i = modes.indexOf(m);
+          return `
+          <li><button class="btn choice" type="button" data-key="${i + 1}" data-mode="${i}">
+            <kbd>${i + 1}</kbd><span>${esc(m.name)}
+            <small class="mark">${m.questions.length.toLocaleString("ja-JP")}島</small></span>
+          </button></li>`;
+        })
+        .join("");
     panel.innerHTML = `
       <h2>難易度を選んでください</h2>
-      <ul class="choices">
-        ${BANDS.map(
-          (name, i) => `
-          <li><button class="btn choice" type="button" data-key="${i + 1}" data-band="${i}">
-            <kbd>${i + 1}</kbd>${esc(name)}
-            <span class="mark">${islands.filter((x) => x.band === i).length.toLocaleString("ja-JP")}島</span>
-          </button></li>`,
-        ).join("")}
-      </ul>
-      <p class="caption">数字キー 1〜4 でも選べます。</p>`;
-    for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-band]")) {
-      b.addEventListener("click", () => play(Number(b.dataset.band)));
+      <ul class="choices">${buttons(bands)}</ul>
+      <h2 class="mode-heading">地域で遊ぶ</h2>
+      <ul class="choices">${buttons(areas)}</ul>
+      <p class="caption">数字キー 1〜${modes.length} でも選べます。</p>`;
+    for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
+      b.addEventListener("click", () => play(modes[Number(b.dataset.mode)]));
     }
-    panel.querySelector<HTMLButtonElement>("[data-band]")?.focus();
+    panel.querySelector<HTMLButtonElement>("[data-mode]")?.focus();
   }
 
-  function play(band: number) {
-    const questions = pickQuestions(islands, band, QUESTIONS, Math.random);
+  function play(mode: Mode) {
+    const questions = pickQuestions(
+      mode.questions,
+      QUESTIONS,
+      Math.random,
+      mode.weight,
+    );
     const answers: Answer[] = [];
 
     const ask = (q: number) => {
       const island = questions[q];
-      const choices = pickChoices(island, islands, Math.random);
+      const choices = pickChoices(island, mode.choices, Math.random);
       const status = `${q + 1} / ${questions.length} 問目`;
-      progress.textContent = `${status}・${BANDS[band]}・正解 ${answers.filter((a) => a.choice === a.island).length}`;
+      progress.textContent = `${status}・${mode.name}・正解 ${answers.filter((a) => a.choice === a.island).length}`;
       showIsland(
         map,
         island,
@@ -185,17 +222,16 @@ async function main() {
             c === island ? "○ 正解" : c === choice ? "× あなたの答え" : "";
           if (!mark) return;
           b.dataset.result = c === island ? "correct" : "wrong";
-          b.insertAdjacentHTML(
+          // 島名の後ろに続けて置く（狭い画面でも「○ 正解」の途中で折り返さない）
+          b.lastElementChild?.insertAdjacentHTML(
             "beforeend",
-            `<span class="mark">${mark}</span>`,
+            ` <small class="mark">${mark}</small>`,
           );
         });
         const head = correct ? "○ 正解！" : `× 不正解… 正解は ${island.name}`;
         const last = q + 1 >= questions.length;
         $("#feedback").innerHTML = `
-          <p class="feedback feedback--${correct ? "correct" : "wrong"}">${esc(head)}</p>
           <div id="viewing">${viewing(island)}</div>
-          <p class="caption">選択肢を押すと、その島を地図で確かめられます。</p>
           <p class="next"><button class="btn" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>`;
         const next = $("#next");
         next.addEventListener("click", () => (last ? result() : ask(q + 1)));
@@ -206,7 +242,7 @@ async function main() {
 
     const result = () => {
       const score = answers.filter((a) => a.choice === a.island).length;
-      progress.textContent = `結果・${BANDS[band]}`;
+      progress.textContent = `結果・${mode.name}`;
       // 島名を押すと、その島へ地図を移す
       const shown: Island[] = [];
       const show = (x: Island) =>
@@ -242,7 +278,7 @@ async function main() {
         </div>
         <p class="caption">島の名前を押すと、その島を地図で確かめられます。</p>
         <p class="row">
-          <button class="btn" type="button" id="again">もう一度（${esc(BANDS[band])}）</button>
+          <button class="btn" type="button" id="again">もう一度（${esc(mode.name)}）</button>
           <button class="btn" type="button" id="back">難易度を選ぶ</button>
         </p>`;
       for (const b of panel.querySelectorAll<HTMLButtonElement>(
@@ -259,7 +295,7 @@ async function main() {
           announce(`地図に表示中: ${x.name}（${describe(x)}）`);
         });
       }
-      $("#again").addEventListener("click", () => play(band));
+      $("#again").addEventListener("click", () => play(mode));
       $("#back").addEventListener("click", start);
       $("#result").focus();
       announce(`結果は ${answers.length} 問中 ${score} 問正解です`);
@@ -271,7 +307,7 @@ async function main() {
   start();
 }
 
-// 数字キー 1〜4 で、パネル内の対応するボタンを押す
+// 数字キー 1〜9 で、パネル内の対応するボタンを押す
 document.addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key)) return;
   if ((e.target as HTMLElement).closest("input, textarea, select")) return;

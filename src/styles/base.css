@@ -162,8 +162,9 @@ a {
 }
 
 .choice .mark {
-  margin-left: auto;
+  font-size: 0.75em;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 /* ---- 正誤の表示 ---- */

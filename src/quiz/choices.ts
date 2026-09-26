@@ -61,6 +61,7 @@ function top(xs: Island[], cost: (x: Island) => number, k = 8): Island[] {
  * 正解 + 不正解 (n-1) 個の選択肢を返す（順番はシャッフル済み）。
  * 不正解は「距離が近い島」「名前が似ている島」「同じ難易度帯の島」から順番に1つずつ選ぶ。
  * 不正解は正解と同じか易しい帯の島に限る（かんたんの問題に無名の岩が混ざらないように）。
+ * ただし、それで足りないとき（地域で絞った pool など）は難しい帯の島でも埋める。
  * 正解と同名の島は入れず、選択肢どうしの名前も重複させない。
  */
 export function pickChoices(
@@ -69,10 +70,10 @@ export function pickChoices(
   rng: Rng,
   n = 4,
 ): Island[] {
-  const candidates = pool.filter(
-    (x) =>
-      x.id !== answer.id && x.name !== answer.name && x.band <= answer.band,
+  const others = pool.filter(
+    (x) => x.id !== answer.id && x.name !== answer.name,
   );
+  const candidates = others.filter((x) => x.band <= answer.band);
   const sources = [
     top(candidates, (x) => distSq(answer, x)),
     top(candidates, (x) => -nameSimilarity(answer, x)),
@@ -81,12 +82,17 @@ export function pickChoices(
   const picked: Island[] = [];
   const names = new Set([answer.name]);
   for (let k = 0; picked.length < n - 1; k++) {
-    // 各候補群を数周しても埋まらなければ全体から選ぶ
+    // 各候補群を数周しても埋まらなければ候補全体から、それでも足りなければ帯を問わず選ぶ
+    const rounds = sources.length * 3;
     const src =
-      k < sources.length * 3 ? sources[k % sources.length] : candidates;
+      k < rounds
+        ? sources[k % sources.length]
+        : k < rounds + n
+          ? candidates
+          : others;
     const options = src.filter((x) => !names.has(x.name));
     if (options.length === 0) {
-      if (src === candidates) break;
+      if (src === others) break;
       continue;
     }
     const x = options[Math.floor(rng() * options.length)];

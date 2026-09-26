@@ -35,11 +35,26 @@
   font-size: 1.25rem;
 }
 
-/* 外部リンク。タップしやすいよう高さを確保する */
+.app__panel .mode-heading {
+  margin-top: 1.25rem;
+}
+
+/* 回答後の「地図に表示中」の説明とリンク。スマホで地図と選択肢が収まるよう詰める */
+#viewing p {
+  margin: 0.25rem 0 0;
+  line-height: 1.5;
+}
+
+/* 外部リンク。補助的なリンクなので、行の高さを節約して WCAG 2.2 AA の最低限（24px）にする */
+#viewing .links {
+  margin-top: 0;
+  font-size: 0.875rem;
+}
+
 .links a {
   display: inline-flex;
   align-items: center;
-  min-height: var(--tap);
+  min-height: 1.5rem;
 }
 
 .next {

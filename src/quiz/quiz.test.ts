@@ -6,7 +6,7 @@ import {
   pickChoices,
   stripSuffix,
 } from "./choices.ts";
-import { pickQuestions } from "./game.ts";
+import { inPolygon, islandsIn, pickQuestions } from "./game.ts";
 import { questionBounds } from "./zoom.ts";
 
 /** 固定シードの乱数 */
@@ -37,15 +37,44 @@ function island(p: Partial<Island>): Island {
 }
 
 describe("pickQuestions", () => {
-  it("指定した帯から重複なしで選ぶ", () => {
-    const pool = [
-      ...Array.from({ length: 30 }, () => island({ band: 0 })),
-      ...Array.from({ length: 30 }, () => island({ band: 1 })),
-    ];
-    const qs = pickQuestions(pool, 1, 10, rng());
-    expect(qs).toHaveLength(10);
+  const pool = Array.from({ length: 30 }, (_, i) =>
+    island({ areaKm2: i < 3 ? 1000 : 0.001 }),
+  );
+  it("重複なしで n 問選ぶ", () => {
+    const qs = pickQuestions(pool, 10, rng());
     expect(new Set(qs.map((q) => q.id)).size).toBe(10);
-    expect(qs.every((q) => q.band === 1)).toBe(true);
+  });
+  it("重みの大きい島ほど選ばれやすい", () => {
+    let big = 0;
+    for (let seed = 1; seed < 50; seed++) {
+      const qs = pickQuestions(pool, 3, rng(seed), (x) => x.areaKm2 ** 0.25);
+      big += qs.filter((q) => q.areaKm2 === 1000).length;
+    }
+    // 均等なら 147 個中 約15個。重みは大きい島 5.6・小さい島 0.18 で、合計では 3島で約8割を占める
+    expect(big).toBeGreaterThan(60);
+  });
+});
+
+describe("地域", () => {
+  // へこんだ形（L 字）でも判定できること
+  const L = [
+    [0, 0],
+    [2, 0],
+    [2, 1],
+    [1, 1],
+    [1, 2],
+    [0, 2],
+  ];
+  it("多角形の内外を判定する", () => {
+    expect(inPolygon([0.5, 0.5], L)).toBe(true);
+    expect(inPolygon([0.5, 1.5], L)).toBe(true);
+    expect(inPolygon([1.5, 1.5], L)).toBe(false);
+    expect(inPolygon([3, 0.5], L)).toBe(false);
+  });
+  it("代表点が地域に入る島だけを選ぶ", () => {
+    const a = island({ center: [0.5, 0.5] });
+    const b = island({ center: [1.5, 1.5] });
+    expect(islandsIn([a, b], L)).toEqual([a]);
   });
 });
 
@@ -112,6 +141,17 @@ describe("pickChoices", () => {
         ),
       ).toBe(true);
     }
+  });
+});
+
+describe("pickChoices（易しい帯の候補が足りないとき）", () => {
+  it("難しい帯の島で埋める", () => {
+    const easy = island({ name: "易島", band: 0 });
+    const pool = [
+      easy,
+      ...Array.from({ length: 5 }, () => island({ band: 3 })),
+    ];
+    expect(pickChoices(easy, pool, rng())).toHaveLength(4);
   });
 });
 

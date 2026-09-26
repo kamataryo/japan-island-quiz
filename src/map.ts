@@ -245,7 +245,8 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
     bounds: [128, 26, 146, 45],
     minZoom: MIN_ZOOM,
     maxZoom: 16,
-    attributionControl: { compact: false },
+    // 最初は開いて表示し、地図を操作すると i アイコンにたたまれる
+    attributionControl: { compact: true },
     dragRotate: false,
     pitchWithRotate: false,
     touchPitch: false,
