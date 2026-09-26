@@ -60,18 +60,24 @@ pnpm data
 ## デプロイ
 
 `main` への push（または Actions の手動実行）で Cloudflare Workers（workers.dev）にデプロイされます（`.github/workflows/deploy.yml`、設定は `wrangler.jsonc`）。
-静的ファイルは Workers の静的アセットとして配り、`/api/answers`（島ごとの正答率の集計、D1）だけ Worker が処理します。
-`base.pmtiles` は大きいのでリポジトリに入れず、**最新の Release** の asset から取り込みます。静的アセットは1ファイル 25MiB までなので、`base.pmtiles` はそれ未満に収めてください。
+静的ファイルは Workers の静的アセットとして配り、次の2つだけ Worker が処理します。
+
+- `/tiles/{z}/{x}/{y}.mvt`: R2 に置いた `base.pmtiles` からタイルを1枚ずつ返す（静的アセットは Range リクエストに対応していないため）
+- `/api/answers`: 島ごとの正答率の集計（D1）
+
+`base.pmtiles` は大きいのでリポジトリに入れず、**最新の Release** の asset から取って R2 に上げます。
 
 初回だけ、次を行ってください。
 
 - D1 を作り、出力の `database_id` を `wrangler.jsonc` に書く: `pnpm wrangler d1 create japan-island-quiz`
+- R2 のバケットを作る: `pnpm wrangler r2 bucket create japan-island-quiz`
 - リポジトリの Secrets に `CLOUDFLARE_API_TOKEN`（「Edit Cloudflare Workers」テンプレート + D1 の編集権限）と `CLOUDFLARE_ACCOUNT_ID` を登録する
 
 手元で集計まで試すとき:
 
 ```sh
 pnpm wrangler d1 migrations apply japan-island-quiz --local
+pnpm wrangler r2 object put japan-island-quiz/base.pmtiles --file public/data/base.pmtiles --local
 pnpm build && pnpm wrangler dev
 ```
 

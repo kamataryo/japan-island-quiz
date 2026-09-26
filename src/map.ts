@@ -57,17 +57,25 @@ const NONE: FilterSpecification = ["==", ["get", "id"], ""];
 
 /** 地名ラベルを一切含まない自前のスタイル */
 function style(): StyleSpecification {
-  const url = new URL(
-    `${import.meta.env.BASE_URL}data/base.pmtiles`,
-    location.href,
-  ).href;
+  const url = (path: string) =>
+    new URL(`${import.meta.env.BASE_URL}${path}`, location.href).href;
   const edge = { "line-color": token("coast"), "line-width": 1 };
   return {
     version: 8,
     sources: {
+      // 本番は Worker が R2 の base.pmtiles から1枚ずつ返す（ブラウザにキャッシュさせられる）。
+      // vite dev には Worker がないので、public/data の PMTiles を直接読む
       base: {
         type: "vector",
-        url: `pmtiles://${url}`,
+        ...(import.meta.env.DEV
+          ? { url: `pmtiles://${url("data/base.pmtiles")}` }
+          : {
+              tiles: [url("tiles/{z}/{x}/{y}.mvt")],
+              minzoom: 3,
+              maxzoom: 12,
+              // データのある範囲（scripts/data/pipeline.ts の CLIP_BBOX）。外側はリクエストしない
+              bounds: [120, 19.5, 156, 50],
+            }),
         attribution:
           '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>',
       },

@@ -191,12 +191,8 @@ async function main() {
         progress.textContent = `${status}・${mode.name}・正解 ${answers.filter((a) => a.choice === a.island).length}`;
       };
       showProgress();
-      showIsland(
-        map,
-        island,
-        questionBounds(island.bbox, Math.random),
-        !reduceMotion.matches,
-      );
+      // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
+      showIsland(map, island, questionBounds(island.bbox, Math.random), false);
       panel.innerHTML = `
         <h2 class="prompt">太い線で囲まれた島はどれ？</h2>
         <ul class="choices">
