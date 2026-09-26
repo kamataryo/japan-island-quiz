@@ -24,7 +24,7 @@ export function buildModes(islands: Island[]): {
   // （帯ごとの島数の差を打ち消すよう、割合を島数で割って1島あたりの重みにする）
   const bands: Mode[] = config.bands.map((b) => ({
     name: b.name,
-    questions: islands.filter((x) => x.band < b.mix.length),
+    questions: islands.filter((x) => (b.mix[x.band] ?? 0) > 0),
     choices: islands,
     weight: (x) => b.mix[x.band] / counts[x.band],
   }));

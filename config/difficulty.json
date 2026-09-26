@@ -9,8 +9,8 @@
   "bands": [
     { "name": "かんたん", "fraction": 0.02, "mix": [1] },
     { "name": "ふつう", "fraction": 0.08, "mix": [0.3, 0.7] },
-    { "name": "むずい", "fraction": 0.3, "mix": [0.1, 0.2, 0.7] },
-    { "name": "おに", "fraction": 0.6, "mix": [0.05, 0.1, 0.15, 0.7] }
+    { "name": "むずい", "fraction": 0.3, "mix": [0, 0.3, 0.7] },
+    { "name": "おに", "fraction": 0.6, "mix": [0, 0, 0.3, 0.7] }
   ],
   "density": {
     "radiusKm": 30,
