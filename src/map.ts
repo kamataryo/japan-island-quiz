@@ -70,7 +70,8 @@ function style(): StyleSpecification {
         ...(import.meta.env.DEV
           ? { url: `pmtiles://${url("data/base.pmtiles")}` }
           : {
-              tiles: [url("tiles/{z}/{x}/{y}.mvt")],
+              // {z} などを URL() に通すとエスケープされるので、後ろに付ける
+              tiles: [`${url("tiles/")}{z}/{x}/{y}.mvt`],
               minzoom: 3,
               maxzoom: 12,
               // データのある範囲（scripts/data/pipeline.ts の CLIP_BBOX）。外側はリクエストしない
