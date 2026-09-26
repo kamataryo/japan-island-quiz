@@ -71,6 +71,39 @@
   line-height: 1.5;
 }
 
+/* 島名を太字で立て、その下に都道府県・面積・人口を「項目名 値」で横に並べる（狭い画面では折り返す） */
+#viewing .island-name strong {
+  font-size: 1.125rem;
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1rem;
+  margin: 0;
+}
+
+.facts div {
+  display: flex;
+  gap: 0.375em;
+  align-items: baseline;
+}
+
+.facts dt {
+  color: var(--c-ink-sub);
+  font-size: 0.875rem;
+}
+
+.facts dd {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* 単位は数字より少し小さくして、数字を目立たせる */
+.facts .unit {
+  font-size: 0.875em;
+}
+
 /* 外部リンク。補助的なリンクなので、行の高さを節約して WCAG 2.2 AA の最低限（24px）にする */
 #viewing .links {
   margin-top: 0;

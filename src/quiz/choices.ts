@@ -85,6 +85,9 @@ const distSq = (a: Island, b: Island) => {
   );
 };
 
+/** これ以上なら「名前が似ている」とみなす（黒島 と 黒髪島、白石島 と 白木島 で 0.5） */
+const SIMILAR = 0.5;
+
 function top(xs: Island[], cost: (x: Island) => number, k = 8): Island[] {
   return xs
     .map((x) => [cost(x), x] as const)
@@ -108,14 +111,16 @@ export function pickChoices(
   rng: Rng,
   n = 4,
 ): Island[] {
-  const others = pool.filter(
-    (x) => x.id !== answer.id && !sameName(x, answer),
-  );
+  const others = pool.filter((x) => x.id !== answer.id && !sameName(x, answer));
   const candidates = others.filter((x) => x.band <= answer.band);
   const near = top(candidates, (x) => distSq(answer, x));
   const sameBand = candidates.filter((x) => x.band === answer.band);
+  // 似ていない島まで候補に入れると、組がほとんどできない
   const similarTo = (h: Island) =>
-    top(candidates, (x) => -nameSimilarity(h, x));
+    top(
+      candidates.filter((x) => x !== h && nameSimilarity(h, x) >= SIMILAR),
+      (x) => -nameSimilarity(h, x),
+    );
   const picked: Island[] = [];
   const add = (src: readonly Island[]) => {
     const options = src.filter(
@@ -127,7 +132,8 @@ export function pickChoices(
   };
   const r = rng();
   if (r < 0.375) add(similarTo(answer));
-  else if (r < 0.75 && add(near)) add(similarTo(picked[0]));
+  else if (r < 0.75 && add(near.filter((h) => similarTo(h).length > 0)))
+    add(similarTo(picked[0]));
   // 残りを埋める。候補群が空なら候補全体から、それでも足りなければ帯を問わず選ぶ
   while (
     picked.length < n - 1 &&

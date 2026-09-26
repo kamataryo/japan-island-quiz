@@ -4,6 +4,7 @@
  * 必要な CLI: osmium, ogr2ogr (GDAL), tippecanoe
  */
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   createReadStream,
   createWriteStream,
@@ -20,7 +21,10 @@ import type { ReadableStream } from "node:stream/web";
 import {
   area,
   bbox,
+  booleanIntersects,
   booleanPointInPolygon,
+  featureCollection,
+  intersect,
   pointOnFeature,
   simplify,
 } from "@turf/turf";
@@ -47,6 +51,7 @@ const OSMIUM_FILTER = [
   "nwr/place=island,islet",
   "a/natural=water",
   "r/admin_level=4",
+  "r/admin_level=7",
 ];
 /** これより大きい陸地ポリゴンは本土扱い（node の島の形状に使わない）。択捉島 3,167km² より十分大きい */
 const MAINLAND_KM2 = 10_000;
@@ -97,7 +102,9 @@ export type Island = {
   wikidata?: string;
   /** 日本語版 Wikipedia の記事名（記事があるときだけ） */
   wikipedia?: string;
-  pref?: string;
+  /** 島と重なる都道府県・市区町村。県境・市町村境の島は複数になり、重なる面積の大きい順に並ぶ */
+  prefs: string[];
+  cities: string[];
   population?: number;
   areaKm2: number;
   bbox: BBox;
@@ -222,6 +229,31 @@ async function* readSeq(path: string): AsyncGenerator<Feature> {
 const isArea = (f: Feature): f is Area =>
   f.geometry?.type === "Polygon" || f.geometry?.type === "MultiPolygon";
 
+type Admin = { name: string; f: Area; b: BBox };
+
+const bboxesOverlap = (a: BBox, b: BBox) =>
+  a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3];
+
+/**
+ * 島と重なる行政区域の名前を、重なる面積の大きい順に返す。
+ * 境界を簡略化しているので、島の面積の 5% 未満しか重ならない区域は、境界のずれとみなして外す（最も重なる区域は残す）
+ */
+function adminsOf(f: Area, b: BBox, admins: Admin[]): string[] {
+  const hits = admins.filter(
+    (a) => bboxesOverlap(b, a.b) && booleanIntersects(f, a.f),
+  );
+  if (hits.length < 2) return hits.map((a) => a.name);
+  const total = area(f);
+  return hits
+    .map((a) => {
+      const i = intersect(featureCollection([f, a.f]));
+      return { name: a.name, share: i ? area(i) / total : 0 };
+    })
+    .sort((x, y) => y.share - x.share)
+    .filter((a, i) => i === 0 || a.share >= 0.05)
+    .map((a) => a.name);
+}
+
 const inBBox = (p: number[], b: BBox) =>
   p[0] >= b[0] && p[0] <= b[2] && p[1] >= b[1] && p[1] <= b[3];
 
@@ -286,8 +318,12 @@ async function main() {
     renameSync(`${land}.tmp`, land);
   }
 
-  // 3. OSM から島・水域・都道府県を抽出
-  const features = `${CACHE}/features-${pbfUrl.split("/").pop()}.geojsonseq`;
+  // 3. OSM から島・水域・都道府県・市区町村を抽出（抽出条件を変えたら作り直す）
+  const filterHash = createHash("sha256")
+    .update(OSMIUM_FILTER.join())
+    .digest("hex")
+    .slice(0, 8);
+  const features = `${CACHE}/features-${pbfUrl.split("/").pop()}-${filterHash}.geojsonseq`;
   if (!existsSync(features)) {
     const filtered = `${CACHE}/filtered.osm.pbf`;
     run("osmium", [
@@ -316,7 +352,8 @@ async function main() {
   const water = createWriteStream(`${CACHE}/water.geojsonseq`);
   const polyIslands: { id: string; tags: Tags; f: Area }[] = [];
   const nodeIslands: { id: string; tags: Tags; p: [number, number] }[] = [];
-  const prefs: { name: string; f: Area; b: BBox }[] = [];
+  const prefs: Admin[] = [];
+  const cities: Admin[] = [];
   for await (const f of readSeq(features)) {
     const tags = (f.properties ?? {}) as Tags;
     const id = `${String(tags["@type"])[0]}${tags["@id"]}`;
@@ -337,11 +374,11 @@ async function main() {
     } else if (
       isArea(f) &&
       tags.boundary === "administrative" &&
-      tags.admin_level === "4"
+      (tags.admin_level === "4" || tags.admin_level === "7")
     ) {
-      // 判定を速くするため簡略化（約50m）。県境ぎりぎりの島を取り違える可能性はある
+      // 判定を速くするため簡略化（約50m）。境界ぎりぎりの小さな島を取り違える可能性はある
       const s = simplify(f, { tolerance: 0.0005 });
-      prefs.push({
+      (tags.admin_level === "4" ? prefs : cities).push({
         name: tags["name:ja"] ?? tags.name ?? "",
         f: s,
         b: bbox(s),
@@ -350,7 +387,7 @@ async function main() {
   }
   await new Promise((r) => water.end(r));
   console.log(
-    `polygon islands: ${polyIslands.length}, node islands: ${nodeIslands.length}, prefs: ${prefs.length}`,
+    `polygon islands: ${polyIslands.length}, node islands: ${nodeIslands.length}, prefs: ${prefs.length}, cities: ${cities.length}`,
   );
 
   // 5. 陸地ポリゴンとの対応付け（node の島に形状を与える / 同じ陸地を指す polygon の島を検出）
@@ -426,11 +463,10 @@ async function main() {
       dropped.push({ id: c.id, name: attrs.name, reason: "小さすぎる" });
       continue;
     }
-    const admins = prefs
-      .filter((p) => inBBox(c.p, p.b) && booleanPointInPolygon(c.p, p.f))
-      .map((p) => p.name);
-    const pref = admins.find((n) => PREFECTURES.has(n));
-    if (!pref) {
+    const b = bbox(c.f);
+    const admins = adminsOf(c.f, b, prefs);
+    const islandPrefs = admins.filter((n) => PREFECTURES.has(n));
+    if (islandPrefs.length === 0) {
       const disputed = DISPUTED_BBOXES.some((b) => inBBox(c.p, b));
       if (!disputed || !attrs.nameJa) {
         const reason =
@@ -446,9 +482,10 @@ async function main() {
     const island = {
       id: c.id,
       ...attrs,
-      pref,
+      prefs: islandPrefs,
+      cities: adminsOf(c.f, b, cities),
       areaKm2,
-      bbox: bbox(c.f),
+      bbox: b,
       center: c.p,
       shapeUniqueness: shapeUniqueness(c.f),
       f: c.f,

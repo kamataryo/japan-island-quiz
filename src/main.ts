@@ -43,26 +43,33 @@ function announce(text: string) {
   });
 }
 
-function formatArea(km2: number): string {
+/** 面積の [数値, 単位] */
+function formatArea(km2: number): [string, string] {
   if (km2 >= 1)
-    return `${km2.toLocaleString("ja-JP", { maximumFractionDigits: 1 })}km²`;
-  return `約${Math.round(km2 * 1e6).toLocaleString("ja-JP")}m²`;
+    return [km2.toLocaleString("ja-JP", { maximumFractionDigits: 1 }), " km²"];
+  return [`約${Math.round(km2 * 1e6).toLocaleString("ja-JP")}`, " m²"];
 }
 
-/** 答え合わせで出す島の詳細（都道府県・面積・人口） */
-function facts(x: Island): string {
+/** 答え合わせで出す島の詳細（都道府県・市区町村・面積・人口）の [項目名, 値, 単位] */
+function facts(x: Island): [string, string, string?][] {
+  const rows: [string, string, string?][] = [];
+  if (x.prefs.length) rows.push(["都道府県", x.prefs.join("・")]);
+  if (x.cities.length) rows.push(["市区町村", x.cities.join("・")]);
+  rows.push(["面積", ...formatArea(x.areaKm2)]);
+  if (x.population)
+    rows.push(["人口", x.population.toLocaleString("ja-JP"), "人"]);
+  return rows;
+}
+
+/** 読み上げ用の島の詳細（読み・都道府県・市区町村・面積・人口） */
+function describe(x: Island): string {
   return [
-    x.pref,
-    `面積 ${formatArea(x.areaKm2)}`,
-    x.population && `人口 ${x.population.toLocaleString("ja-JP")}人`,
+    x.yomi && `読み: ${x.yomi}`,
+    // 都道府県・市区町村は値だけで通じるので項目名を読まない
+    ...facts(x).map(([k, v, unit = ""]) => (unit ? `${k} ${v}${unit}` : v)),
   ]
     .filter(Boolean)
     .join("・");
-}
-
-/** 読み上げ用の島の詳細（読み・都道府県・面積・人口） */
-function describe(x: Island): string {
-  return x.yomi ? `読み: ${x.yomi}・${facts(x)}` : facts(x);
 }
 
 /** 新しいタブで開くリンクの印（四角から右上へ矢印が出るアイコン）と、読み上げ用の説明 */
@@ -77,7 +84,15 @@ function viewing(x: Island): string {
     x.wikipedia &&
     `https://ja.wikipedia.org/wiki/${encodeURIComponent(x.wikipedia)}`;
   return `
-    <p>${esc(x.name)}${x.yomi ? `<small>（${esc(x.yomi)}）</small>` : ""}・${esc(facts(x))}</p>
+    <p class="island-name"><strong>${esc(x.name)}</strong>${x.yomi ? `<small>（${esc(x.yomi)}）</small>` : ""}</p>
+    <dl class="facts">
+      ${facts(x)
+        .map(
+          ([k, v, unit]) =>
+            `<div><dt>${esc(k)}</dt><dd>${esc(v)}${unit ? `<span class="unit">${esc(unit)}</span>` : ""}</dd></div>`,
+        )
+        .join("")}
+    </dl>
     <p class="row links">
       ${wiki ? `<a href="${esc(wiki)}" target="_blank" rel="noopener">Wikipedia「${esc(x.wikipedia ?? "")}」${newTab}</a>` : ""}
       <a href="${esc(gmap)}" target="_blank" rel="noopener">Google マップ${newTab}</a>
@@ -304,7 +319,7 @@ async function main() {
                     <td>${i + 1}</td>
                     <td class="result__mark">${ok ? "○ 正解" : "× 不正解"}</td>
                     <th scope="row">${show(a.island)}</th>
-                    <td>${esc(a.island.pref ?? "")}</td>
+                    <td>${esc(a.island.prefs.join("・"))}</td>
                     <td>${show(a.choice)}</td>
                   </tr>`;
                 })

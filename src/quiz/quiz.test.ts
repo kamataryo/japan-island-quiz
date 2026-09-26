@@ -10,8 +10,9 @@ import {
 import { inPolygon, islandsIn, pickQuestions } from "./game.ts";
 import { questionBounds } from "./zoom.ts";
 
-/** 固定シードの乱数 */
+/** 固定シードの乱数。小さいシードのままだと最初の値がどれも 0 に近くなるので、散らしてから使う */
 function rng(seed = 1) {
+  seed = (seed * 1_000_003) % 2147483647;
   return () => {
     seed = (seed * 16807) % 2147483647;
     return seed / 2147483647;
@@ -33,6 +34,8 @@ function island(p: Partial<Island>): Island {
     score: 0,
     band: 0,
     bandByArea: 0,
+    prefs: [],
+    cities: [],
     ...p,
   };
 }
@@ -117,12 +120,12 @@ describe("名前の比較", () => {
 describe("pickChoices", () => {
   const answer = island({
     name: "大島",
-    pref: "東京都",
+    prefs: ["東京都"],
     center: [139.4, 34.7],
   });
   const pool = [
     answer,
-    island({ name: "大島", pref: "山口県" }), // 同名 → 入れない
+    island({ name: "大島", prefs: ["山口県"] }), // 同名 → 入れない
     island({ name: "利島", center: [139.28, 34.52] }),
     island({ name: "新島", center: [139.26, 34.37] }),
     island({ name: "新島", center: [139.27, 34.38] }), // 選択肢内で名前が重複しない
@@ -168,8 +171,9 @@ describe("pickChoices", () => {
       island({ name: "黒髪島", center: [135, 35] }),
       island({ name: "白石島", center: [130.01, 33] }),
       island({ name: "白木島", center: [135, 35] }),
+      // 互いに似ていない島（「岩」は接尾辞として除かないので「甲岩」などだと互いに似てしまう）
       ...Array.from({ length: 10 }, (_, i) =>
-        island({ name: `${"甲乙丙丁戊己庚辛壬癸"[i]}岩`, center: [131, 34] }),
+        island({ name: `${"甲乙丙丁戊己庚辛壬癸"[i]}島`, center: [131, 34] }),
       ),
     ];
     const kinds = { answer: 0, dummy: 0 };

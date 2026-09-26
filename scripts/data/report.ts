@@ -122,6 +122,7 @@ export function writeReport(
     "名前",
     "読み",
     "都道府県",
+    "市区町村",
     "面積 km²",
     "sitelinks",
     "人口",
@@ -134,7 +135,8 @@ export function writeReport(
   const row = (x: Island) => [
     x.name,
     x.yomi,
-    x.pref,
+    x.prefs.join("・"),
+    x.cities.join("・"),
     km2(x.areaKm2),
     x.sitelinks,
     x.population,
@@ -184,7 +186,7 @@ export function writeReport(
         .map(([n, xs]) => [
           n,
           xs.length,
-          [...new Set(xs.map((x) => x.pref ?? "(なし)"))].join("、"),
+          [...new Set(xs.flatMap((x) => x.prefs))].join("、") || "(なし)",
         ]),
     ),
   );
@@ -192,7 +194,8 @@ export function writeReport(
   p("## 都道府県ごとの件数");
   const byPref = new Map<string, number>();
   for (const x of islands)
-    byPref.set(x.pref ?? "(なし)", (byPref.get(x.pref ?? "(なし)") ?? 0) + 1);
+    for (const pref of x.prefs.length ? x.prefs : ["(なし)"])
+      byPref.set(pref, (byPref.get(pref) ?? 0) + 1);
   p(
     table(
       ["都道府県", "件数"],
@@ -200,9 +203,21 @@ export function writeReport(
     ),
   );
 
-  const noPref = islands.filter((x) => !x.pref);
+  const noPref = islands.filter((x) => x.prefs.length === 0);
   p(`## 都道府県が付かなかった島（${noPref.length}件、先頭50件）`);
   p(table(header, noPref.slice(0, 50).map(row)));
+
+  const multiPref = islands.filter((x) => x.prefs.length > 1);
+  p(`## 複数の都道府県にまたがる島（${multiPref.length}件、先頭50件）`);
+  p(table(header, multiPref.slice(0, 50).map(row)));
+
+  const noCity = islands.filter((x) => x.cities.length === 0);
+  p(`## 市区町村が付かなかった島（${noCity.length}件、先頭50件）`);
+  p(table(header, noCity.slice(0, 50).map(row)));
+
+  const multiCity = islands.filter((x) => x.cities.length > 1);
+  p(`## 複数の市区町村にまたがる島（${multiCity.length}件、先頭50件）`);
+  p(table(header, multiCity.slice(0, 50).map(row)));
 
   p("## 除外した島");
   const group = (r: string) => r.replace(/（.*$/, "");

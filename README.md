@@ -31,7 +31,7 @@ pnpm data
 | 段階 | 入力 | 出力 |
 |---|---|---|
 | 取得 | [Geofabrik 日本抽出](https://download.geofabrik.de/asia/japan.html)（日付付きファイルに固定）、[osmdata land polygons](https://osmdata.openstreetmap.de/data/land-polygons.html) | `data/cache/`（取得元と日時は `sources.json`） |
-| 抽出 | `osmium tags-filter` で place=island/islet・natural=water・admin_level=4 | `data/cache/features-*.geojsonseq` |
+| 抽出 | `osmium tags-filter` で place=island/islet・natural=water・admin_level=4（都道府県）・admin_level=7（市区町村） | `data/cache/features-*.geojsonseq`（抽出条件ごと） |
 | 陸地 | land polygons を日本周辺で切り抜き（ogr2ogr） | `data/cache/land.geojsonseq` |
 | 島の組み立て | way/relation の島はそのまま。node だけの島は、その node を含む陸地ポリゴンを形状にする | |
 | 知名度・人口・記事名 | Wikidata SPARQL（sitelinks 数、P1082、日本語版 Wikipedia の記事） | `data/cache/wikidata-v2.json` |
@@ -107,7 +107,7 @@ git push
 
 | データ | 使い方 | ライセンス・出典表示 |
 |---|---|---|
-| [OpenStreetMap](https://www.openstreetmap.org/copyright)（[Geofabrik の日本抽出](https://download.geofabrik.de/asia/japan.html)） | 島・水域・都道府県 | ODbL 1.0。画面に「© OpenStreetMap contributors」 |
+| [OpenStreetMap](https://www.openstreetmap.org/copyright)（[Geofabrik の日本抽出](https://download.geofabrik.de/asia/japan.html)） | 島・水域・都道府県・市区町村 | ODbL 1.0。画面に「© OpenStreetMap contributors」 |
 | [osmdata.openstreetmap.de の land polygons](https://osmdata.openstreetmap.de/data/land-polygons.html) | 陸地 | OSM 由来なので ODbL 1.0（上の表示に含まれる） |
 | [Wikidata](https://www.wikidata.org/) | 知名度・人口・Wikipedia の記事名 | CC0（表示義務なし） |
 | [国土地理院 標高タイル](https://maps.gsi.go.jp/development/ichiran.html)（`dem_png`、DEM10B） | 陰影（ブラウザで terrarium 形式に変換して描画） | [国土地理院コンテンツ利用規約](https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html)（公共データ利用規約 第1.0版）。出典の記載のみで申請不要。加工しているので、画面に「地理院タイル（標高を加工、最適化ベクトル）」とまとめて表示 |

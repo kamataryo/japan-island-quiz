@@ -53,7 +53,7 @@ map.on("click", ["points", "target-fill"], (e) => {
   div.style.whiteSpace = "pre-line";
   div.textContent = [
     `${x.name}${x.yomi ? `（${x.yomi}）` : ""}`,
-    `${x.pref ?? "都道府県不明"}・${config.bands[x.band].name}`,
+    `${x.prefs.join("・") || "都道府県不明"} ${x.cities.join("・")}・${config.bands[x.band].name}`,
     `面積 ${x.areaKm2.toFixed(3)} km²`,
     x.population != null && `人口 ${x.population}`,
     `sitelinks ${x.sitelinks}・スコア ${x.score.toFixed(3)}`,
