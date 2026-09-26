@@ -28,10 +28,12 @@ export function parseIds(param: string | null): string[] | undefined {
 }
 
 /**
- * R2 から PMTiles を範囲指定で読む。
- * ヘッダとディレクトリは PMTiles がこの isolate のメモリにキャッシュするので、R2 を読むのはほぼタイル本体だけになる
+ * R2 の PMTiles を isolate ごとに1回だけ丸ごと読み、以降はメモリから切り出す。
+ * R2 の範囲読み出しは1回ごとに数百 ms かかり、タイル1枚にヘッダ・ディレクトリ・本体と続けて読むと 1 秒近くになっていたため
  */
+// ponytail: ファイル全体（約25MB）をメモリに置く。Worker のメモリ上限は 128MB なので、PMTiles が 60MB を超えるようなら範囲読み出し＋Cache API（独自ドメインが必要）に戻す
 class R2Source implements Source {
+  private file?: Promise<{ data: ArrayBuffer; etag: string }>;
   constructor(
     private bucket: R2Bucket,
     private key: string,
@@ -40,9 +42,16 @@ class R2Source implements Source {
     return this.key;
   }
   async getBytes(offset: number, length: number): Promise<RangeResponse> {
-    const obj = await this.bucket.get(this.key, { range: { offset, length } });
-    if (!obj) throw new Error(`${this.key} が R2 にありません`);
-    return { data: await obj.arrayBuffer(), etag: obj.etag };
+    this.file ??= this.bucket.get(this.key).then(async (obj) => {
+      if (!obj) throw new Error(`${this.key} が R2 にありません`);
+      return { data: await obj.arrayBuffer(), etag: obj.etag };
+    });
+    // 読み込みに失敗したら次のリクエストで読み直す
+    const { data, etag } = await this.file.catch((e) => {
+      this.file = undefined;
+      throw e;
+    });
+    return { data: data.slice(offset, offset + length), etag };
   }
 }
 
