@@ -45,8 +45,8 @@ addProtocol("gsidem", async ({ url }, { signal }) => {
 
 /** マーカー（赤い円）の半径 px。島の外接円がこれより小さく写るときだけ表示する */
 const MARKER_RADIUS = 16;
-/** タイルは z3 から。これより引くと地図が消える */
-const MIN_ZOOM = 3;
+/** これより引くと、データのある範囲（日本周辺）の端が見えてしまう */
+const MIN_ZOOM = 5;
 
 const token = (name: string) =>
   getComputedStyle(document.documentElement)
@@ -54,7 +54,6 @@ const token = (name: string) =>
     .trim();
 
 const NONE: FilterSpecification = ["==", ["get", "id"], ""];
-
 
 /** 地名ラベルを一切含まない自前のスタイル */
 function style(): StyleSpecification {
@@ -71,23 +70,6 @@ function style(): StyleSpecification {
         url: `pmtiles://${url}`,
         attribution:
           '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>',
-      },
-      dem: {
-        type: "raster-dem",
-        tiles: ["gsidem://{z}/{x}/{y}"],
-        tileSize: 256,
-        minzoom: 1,
-        maxzoom: 14,
-        encoding: "terrarium",
-        attribution:
-          '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル（標高タイル）を加工して作成</a>',
-      },
-      // 国土地理院最適化ベクトルタイル（試験公開）。等高線の Cntr レイヤーだけ使う（z9〜）
-      gsi: {
-        type: "vector",
-        url: "pmtiles://https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/optimal_bvmap-v1.pmtiles",
-        attribution:
-          '<a href="https://github.com/gsi-cyberjapan/optimal_bvmap">国土地理院最適化ベクトルタイル</a>',
       },
       marker: {
         type: "geojson",
@@ -125,30 +107,7 @@ function style(): StyleSpecification {
         filter: NONE,
         paint: { "fill-color": token("highlight-fill") },
       },
-      // 陰影と等高線は黄色い塗りの上に重ね、出題中の島でも地形が見えるようにする。
-      // 赤い太線は最前面に置くので埋もれない
-      {
-        id: "hillshade",
-        type: "hillshade",
-        source: "dem",
-        paint: {
-          "hillshade-shadow-color": token("hill-shadow"),
-          "hillshade-highlight-color": token("hill-highlight"),
-          "hillshade-accent-color": token("hill-shadow"),
-        },
-      },
-      {
-        id: "contour",
-        type: "line",
-        source: "gsi",
-        "source-layer": "Cntr",
-        paint: {
-          "line-color": token("contour"),
-          // 7352 は計曲線（値が 50m ごとだけのもの）。太く描く
-          "line-width": ["match", ["get", "vt_code"], 7352, 1.2, 0.6],
-          "line-opacity": 0.8,
-        },
-      },
+      // ここに陰影と等高線が入る（addTerrain）。
       // 水域は陰影・等高線より上に置き、湖や池を地図帳のように平らな水色にする
       // （地理院の等高線は OSM の水域と形がずれ、池の上を横切ることがあるため）
       {
@@ -203,6 +162,60 @@ function style(): StyleSpecification {
   };
 }
 
+/**
+ * 陰影と等高線（国土地理院）を水域の下に足す。地図の読み込み後に足すので、
+ * 地理院のタイルが読めなくても OSM の地図だけでクイズは続けられる（失敗はコンソールに出るだけ）
+ */
+function addTerrain(map: MapLibreMap): void {
+  map.addSource("dem", {
+    type: "raster-dem",
+    tiles: ["gsidem://{z}/{x}/{y}"],
+    tileSize: 256,
+    minzoom: 1,
+    maxzoom: 14,
+    encoding: "terrarium",
+    attribution:
+      '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル（標高タイル）を加工して作成</a>',
+  });
+  // 国土地理院最適化ベクトルタイル（試験公開）。等高線の Cntr レイヤーだけ使う（z9〜）
+  map.addSource("gsi", {
+    type: "vector",
+    url: "pmtiles://https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/optimal_bvmap-v1.pmtiles",
+    attribution:
+      '<a href="https://github.com/gsi-cyberjapan/optimal_bvmap">国土地理院最適化ベクトルタイル</a>',
+  });
+  // 陰影と等高線は黄色い塗りの上に重ね、出題中の島でも地形が見えるようにする。
+  // 赤い太線は最前面に置くので埋もれない
+  map.addLayer(
+    {
+      id: "hillshade",
+      type: "hillshade",
+      source: "dem",
+      paint: {
+        "hillshade-shadow-color": token("hill-shadow"),
+        "hillshade-highlight-color": token("hill-highlight"),
+        "hillshade-accent-color": token("hill-shadow"),
+      },
+    },
+    "water",
+  );
+  map.addLayer(
+    {
+      id: "contour",
+      type: "line",
+      source: "gsi",
+      "source-layer": "Cntr",
+      paint: {
+        "line-color": token("contour"),
+        // 7352 は計曲線（値が 50m ごとだけのもの）。太く描く
+        "line-width": ["match", ["get", "vt_code"], 7352, 1.2, 0.6],
+        "line-opacity": 0.8,
+      },
+    },
+    "water",
+  );
+}
+
 export function createMap(container: HTMLElement): Promise<MapLibreMap> {
   const map = new MapLibreMap({
     container,
@@ -228,6 +241,7 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
     );
     map.once("load", () => {
       clearTimeout(timer);
+      addTerrain(map);
       resolve(map);
     });
     map.once("error", (e) => {

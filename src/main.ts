@@ -19,6 +19,13 @@ const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 type Answer = { island: Island; choice: Island };
 
+declare global {
+  interface Window {
+    /** 開発・調査用に MapLibre の Map を露出する（コンソールから触る） */
+    __map?: Awaited<ReturnType<typeof createMap>>;
+  }
+}
+
 /** HTML 文字列を組み立てる。値は必ず esc() を通す */
 const esc = (s: string | number) =>
   String(s).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
@@ -80,6 +87,7 @@ async function main() {
       res.json() as Promise<Island[]>,
       createMap($("#map")),
     ]);
+    window.__map = map;
   } catch (e) {
     panel.innerHTML = `<p class="feedback feedback--wrong" role="alert">× データを読み込めませんでした（${esc(String(e))}）</p>`;
     return;
@@ -237,7 +245,9 @@ async function main() {
           <button class="btn" type="button" id="again">もう一度（${esc(BANDS[band])}）</button>
           <button class="btn" type="button" id="back">難易度を選ぶ</button>
         </p>`;
-      for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-show]")) {
+      for (const b of panel.querySelectorAll<HTMLButtonElement>(
+        "[data-show]",
+      )) {
         b.addEventListener("click", () => {
           const x = shown[Number(b.dataset.show)];
           jump(x);
