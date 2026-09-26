@@ -39,6 +39,7 @@ pnpm data
 | 出力 | | `public/data/islands.json`, `public/data/meta.json`, `public/data/base.pmtiles`, `data/report.md`（目視確認用） |
 
 - 各段階の成果物は `data/cache/` にキャッシュされます。やり直すときは該当ファイルを消してください
+- OSM データ（`data/cache/japan-*.osm.pbf`）は、一度取得したら新しい日付のものが出ても使い続けます。最新にするときはこのファイルを消してください
 - 特定の日付の OSM データで再現するには `PBF_URL=https://download.geofabrik.de/asia/japan-YYMMDD.osm.pbf pnpm data`
 - 取得日時・取得条件・件数は `public/data/meta.json` に記録されます
 - 出題対象外: 名前のない島、本州・北海道・九州・四国、0.001km² 未満の島、国外の島

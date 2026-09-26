@@ -129,26 +129,36 @@ async function download(url: string, dest: string): Promise<Source> {
   };
 }
 
+const SOURCES = `${CACHE}/sources.json`;
+
+function readSources(): Record<string, Source> {
+  return existsSync(SOURCES) ? JSON.parse(readFileSync(SOURCES, "utf8")) : {};
+}
+
 /** 取得済みなら記録を返し、なければダウンロードする */
 async function ensureSource(
   key: string,
   url: string,
   dest: string,
 ): Promise<Source> {
-  const path = `${CACHE}/sources.json`;
-  const sources: Record<string, Source> = existsSync(path)
-    ? JSON.parse(readFileSync(path, "utf8"))
-    : {};
+  const sources = readSources();
   if (!existsSync(dest) || sources[key]?.url !== url) {
     sources[key] = await download(url, dest);
-    writeFileSync(path, JSON.stringify(sources, null, 2));
+    writeFileSync(SOURCES, JSON.stringify(sources, null, 2));
   }
   return sources[key];
 }
 
-/** japan-latest は日付付きファイルへリダイレクトされるので、その URL に固定する。PBF_URL で指定も可 */
+/**
+ * japan-latest は日付付きファイルへリダイレクトされるので、その URL に固定する。
+ * 取得済みの PBF があれば、新しい日付のファイルが出ていてもそれを使い続ける
+ * （最新にするときは data/cache の *.osm.pbf を消す）。PBF_URL で指定も可
+ */
 async function resolvePbfUrl(): Promise<string> {
   if (process.env.PBF_URL) return process.env.PBF_URL;
+  const cached = readSources().pbf?.url;
+  if (cached && existsSync(`${CACHE}/${cached.split("/").pop()}`))
+    return cached;
   const res = await fetch(PBF_LATEST, {
     method: "HEAD",
     redirect: "manual",
