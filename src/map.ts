@@ -138,6 +138,17 @@ function style(): StyleSpecification {
         "source-layer": "islands",
         paint: edge,
       },
+      // 赤い輪郭の下に紙色の縁取りを敷く。急斜面では陰影が重なって陸が暗くなり
+      // （透明度は最大で約 0.5）、赤と陸が直接接すると 3:1 を割るため
+      {
+        id: "target-casing",
+        type: "line",
+        source: "base",
+        "source-layer": "islands",
+        filter: NONE,
+        layout: { "line-join": "round" },
+        paint: { "line-color": token("paper"), "line-width": 6 },
+      },
       {
         id: "target-line",
         type: "line",
@@ -145,7 +156,18 @@ function style(): StyleSpecification {
         "source-layer": "islands",
         filter: NONE,
         layout: { "line-join": "round" },
-        paint: { "line-color": token("highlight"), "line-width": 4 },
+        paint: { "line-color": token("highlight"), "line-width": 3 },
+      },
+      {
+        id: "marker-casing",
+        type: "circle",
+        source: "marker",
+        paint: {
+          "circle-radius": MARKER_RADIUS - 1,
+          "circle-color": "rgba(0, 0, 0, 0)",
+          "circle-stroke-color": token("paper"),
+          "circle-stroke-width": 5,
+        },
       },
       {
         id: "marker",
@@ -285,6 +307,7 @@ export function showIsland(
 ): void {
   const filter: FilterSpecification = ["==", ["get", "id"], island.id];
   map.setFilter("target-fill", filter);
+  map.setFilter("target-casing", filter);
   map.setFilter("target-line", filter);
   if (!target) map.on("zoom", () => updateMarker(map));
   target = island;

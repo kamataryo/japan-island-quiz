@@ -48,5 +48,11 @@ export const PAIRS: { fg: string; bg: string; min: number; use: string }[] = [
     min: 3,
     use: "出題中の島の輪郭（島の内側）",
   },
+  {
+    fg: "highlight",
+    bg: "paper",
+    min: 3,
+    use: "出題中の島の輪郭（紙色の縁取りの上。陰影で暗い陸でも保つ）",
+  },
   { fg: "coast", bg: "sea", min: 3, use: "海岸線（海と陸の境界）" },
 ];

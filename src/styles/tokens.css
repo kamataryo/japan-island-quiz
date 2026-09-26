@@ -33,7 +33,7 @@
   --c-land-4: #c9a866;
   --c-coast: #56788c;
   --c-contour: #9a6d42;
-  /* 陰影は半透明。濃くすると赤い輪郭（highlight）と陸のコントラストが 3:1 を割る */
+  /* 陰影は半透明。急斜面では陸が暗くなるので、赤い輪郭には紙色の縁取りを敷いている（map.ts） */
   --c-hill-shadow: rgba(92, 64, 32, 0.3);
   --c-hill-highlight: rgba(255, 251, 239, 0.35);
   --c-highlight: #b3261e;
