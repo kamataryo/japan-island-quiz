@@ -14,10 +14,10 @@ export type Mode = {
 };
 
 /**
- * 地域モードは帯を混ぜて出すので、均等だと小さな岩ばかりになる。面積^0.25 で大きい島を出やすくする
- * （瀬戸内海で 1ゲームの内訳が おおよそ かんたん0.4・ふつう2.8・むずい4.7・おに2.0 問になる）
+ * 地域モードは帯を混ぜて出すので、均等だと小さな岩ばかりになる。面積^0.5 で大きい島を出やすくする
+ * （瀬戸内海で 1ゲームの内訳が おおよそ かんたん1.5・ふつう4.4・むずい3.5・おに0.6 問になる）
  */
-const regionWeight = (x: Island) => x.areaKm2 ** 0.25;
+const regionWeight = (x: Island) => x.areaKm2 ** 0.5;
 
 export function buildModes(islands: Island[]): {
   bands: Mode[];
