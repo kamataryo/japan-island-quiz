@@ -105,11 +105,11 @@ async function fetchStats(xs: Island[]): Promise<Map<string, Stats>> {
   }
 }
 
-/** 「（みんなの正答率 72%・1,234回答）」。回答がまだなければ空文字 */
+/** 「みんなの正答率 72%・1,234回答」。回答がまだなければ空文字 */
 function formatRate(s: Stats | undefined): string {
   if (!s?.answers) return "";
   const rate = Math.round((s.correct / s.answers) * 100);
-  return `（みんなの正答率 ${rate}%・${s.answers.toLocaleString("ja-JP")}回答）`;
+  return `みんなの正答率 ${rate}%・${s.answers.toLocaleString("ja-JP")}回答`;
 }
 
 // ---- 画面 ----
@@ -193,7 +193,8 @@ async function main() {
       // 出題の移動より後に出す（移動で消えないように）
       if (q === 0) showPanHint(map);
       panel.innerHTML = `
-        <h2 class="prompt">太い線で囲まれた島はどれ？<small id="rate" class="caption"></small></h2>
+        <h2 class="prompt">太い線で囲まれた島はどれ？</h2>
+        <p id="rate" class="caption"></p>
         <ul class="choices">
           ${choices
             .map(

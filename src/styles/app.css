@@ -77,11 +77,13 @@
   font-size: 0.875rem;
 }
 
-/* 問題文の後ろに続けるみんなの正答率。見出しでも本文のフォントにする */
+/* 問題文の下のみんなの正答率。回答がまだない・集計を取れないときは行ごと消す */
 #rate {
-  display: inline;
-  font-family: var(--font-body);
-  font-weight: normal;
+  margin: -0.5rem 0 0.75rem;
+}
+
+#rate:empty {
+  display: none;
 }
 
 .links a {
