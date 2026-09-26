@@ -1,7 +1,7 @@
 /**
  * 静的アセットの配信に加えて、次の2つを Worker で処理する（wrangler.jsonc の run_worker_first）。
  * - /tiles/{z}/{x}/{y}.mvt: R2 に置いた base.pmtiles から1枚ずつ返す
- * - /api/answers: 島ごとの正答率の集計
+ * - /api/answers: 島ごとの正答率の集計（POST で回答を足し、GET ?ids= で1ゲーム分をまとめて読む）
  */
 import { PMTiles, type RangeResponse, type Source } from "pmtiles";
 import islands from "../public/data/islands.json";
@@ -17,6 +17,14 @@ export function parseAnswer(
   if (typeof id !== "string" || !IDS.has(id) || typeof correct !== "boolean")
     return;
   return { id, correct };
+}
+
+/** GET の ?ids=a,b,c を検証する。1ゲーム分（10問）より多いもの・実在しない島を含むものは弾く */
+export function parseIds(param: string | null): string[] | undefined {
+  const ids = param?.split(",") ?? [];
+  if (ids.length === 0 || ids.length > 10 || !ids.every((id) => IDS.has(id)))
+    return;
+  return ids;
 }
 
 /**
@@ -57,8 +65,20 @@ async function tile(env: Env, z: number, x: number, y: number) {
 }
 
 async function answer(req: Request, env: Env) {
+  if (req.method === "GET") {
+    // 読むだけなのでレート制限はかけない
+    const ids = parseIds(new URL(req.url).searchParams.get("ids"));
+    if (!ids) return new Response(null, { status: 400 });
+    const { results } = await env.DB.prepare(
+      `SELECT id, answers, correct FROM island_stats WHERE id IN (${ids.map(() => "?").join(",")})`,
+    )
+      .bind(...ids)
+      .all<{ id: string; answers: number; correct: number }>();
+    // まだ回答がない島は含めない
+    return Response.json(results);
+  }
   if (req.method !== "POST")
-    return new Response(null, { status: 405, headers: { allow: "POST" } });
+    return new Response(null, { status: 405, headers: { allow: "GET, POST" } });
 
   const ip = req.headers.get("cf-connecting-ip") ?? "";
   if (!(await env.LIMITER.limit({ key: ip })).success)
