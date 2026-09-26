@@ -32,13 +32,23 @@ export function buildModes(islands: Island[]): {
   // （外の島が混ざると、それだけで不正解と分かってしまうため）
   const areas: Mode[] = regions.map((r) => {
     const xs = islandsIn(islands, r.polygon);
+    // 帯を混ぜて出すので、均等だと小さな岩ばかりになる。面積^weightExponent で大きい島を出やすくする
+    // （地域ごとに島の大きさの分布が違うので指数も地域ごとに決める）
+    const base = (x: Island) => x.areaKm2 ** r.weightExponent;
+    // 「おに」は指数だけでは減らしきれないので、重みを縮めて出る割合を oniShare 以下にする
+    const oni = config.bands.length - 1;
+    const sum = (ys: Island[]) => ys.reduce((s, x) => s + base(x), 0);
+    const oniW = sum(xs.filter((x) => x.band === oni));
+    const restW = sum(xs.filter((x) => x.band !== oni));
+    const k = Math.min(
+      1,
+      ((r.oniShare / (1 - r.oniShare)) * restW) / oniW || 1,
+    );
     return {
       name: r.name,
       questions: xs,
       choices: xs,
-      // 帯を混ぜて出すので、均等だと小さな岩ばかりになる。面積^weightExponent で大きい島を出やすくする
-      // （地域ごとに島の大きさの分布が違うので指数も地域ごとに決める）
-      weight: (x) => x.areaKm2 ** r.weightExponent,
+      weight: (x) => base(x) * (x.band === oni ? k : 1),
       polygon: r.polygon,
     };
   });
