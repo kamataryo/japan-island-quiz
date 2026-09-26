@@ -203,7 +203,7 @@ async function main() {
       <ul class="choices">${buttons(bands)}</ul>
       <h2 class="mode-heading">地域で遊ぶ</h2>
       <ul class="choices">${buttons(areas)}</ul>
-      <p class="caption">数字キー 1〜${modes.length} でも選べます。</p>`;
+      <p class="caption retro">数字キー 1〜${modes.length} でも選べます。</p>`;
     for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
       b.addEventListener("click", () => play(modes[Number(b.dataset.mode)]));
     }
@@ -303,7 +303,7 @@ async function main() {
         const last = q + 1 >= questions.length;
         $("#feedback").innerHTML = `
           <div id="viewing">${viewing(island)}</div>
-          <p class="next"><button class="btn" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>`;
+          <p class="next"><button class="btn retro" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>`;
         record(island, correct);
         const next = $("#next");
         next.addEventListener("click", () => (last ? result() : ask(q + 1)));
@@ -350,8 +350,8 @@ async function main() {
         </div>
         <p class="caption">島の名前を押すと、その島を地図で確かめられます。</p>
         <p class="row">
-          <button class="btn" type="button" id="again">もう一度（${esc(mode.name)}）</button>
-          <button class="btn" type="button" id="back">難易度を選ぶ</button>
+          <button class="btn retro" type="button" id="again">もう一度（${esc(mode.name)}）</button>
+          <button class="btn retro" type="button" id="back">難易度を選ぶ</button>
         </p>`;
       for (const b of panel.querySelectorAll<HTMLButtonElement>(
         "[data-show]",

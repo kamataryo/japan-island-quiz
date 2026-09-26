@@ -101,6 +101,11 @@ a {
   }
 }
 
+/* .btn の font: inherit より後に置いて、.retro の指定を生かす */
+.btn.retro {
+  font-family: var(--font-retro);
+}
+
 .btn:active,
 .btn[aria-pressed="true"] {
   box-shadow:
