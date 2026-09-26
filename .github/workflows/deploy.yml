@@ -28,7 +28,10 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       # dist（静的アセット）に入らないよう public/data の外に置く
-      - run: gh release download --pattern base.pmtiles --dir "$RUNNER_TEMP"
+      # meta.json に対応する Release を取り、islands.json と組みになっているか確かめる（Release の作り忘れで古い地図のまま公開しないように）
+      - run: |
+          gh release download "$(node scripts/release-pmtiles.ts --tag)" --pattern base.pmtiles --dir "$RUNNER_TEMP"
+          echo "$(node -p 'require("./public/data/meta.json").pmtilesSha256')  $RUNNER_TEMP/base.pmtiles" | sha256sum -c
         env:
           GH_TOKEN: ${{ github.token }}
       - run: pnpm test

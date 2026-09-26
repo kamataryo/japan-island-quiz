@@ -160,11 +160,6 @@
   list-style: none;
 }
 
-.report summary .external {
-  margin-right: 0.25em;
-  vertical-align: -0.125em;
-}
-
 .report summary::-webkit-details-marker {
   display: none;
 }
@@ -187,6 +182,11 @@
   flex: none;
   width: 1em;
   height: 1em;
+}
+
+.report summary .external {
+  margin-right: 0.25em;
+  vertical-align: -0.125em;
 }
 
 .next {

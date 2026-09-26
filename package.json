@@ -12,7 +12,8 @@
     "test": "vitest run --passWithNoTests",
     "lint": "biome check .",
     "format": "biome check --write .",
-    "data": "node scripts/data/pipeline.ts"
+    "data": "node scripts/data/pipeline.ts",
+    "release-pmtiles": "node scripts/release-pmtiles.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.10",

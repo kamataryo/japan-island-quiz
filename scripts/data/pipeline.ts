@@ -677,6 +677,14 @@ async function main() {
     "-L",
     `islands:${CACHE}/islands.geojsonseq`,
   ]);
+  // deploy で Release の base.pmtiles がこの islands.json と組みになっているか確かめるため
+  const pmtilesSha256 = createHash("sha256")
+    .update(readFileSync(`${OUT}/base.pmtiles`))
+    .digest("hex");
+  writeFileSync(
+    `${OUT}/meta.json`,
+    JSON.stringify({ ...meta, pmtilesSha256 }, null, 2),
+  );
 }
 
 // ---- Wikidata ----

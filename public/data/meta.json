@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-09-26T09:37:35.298Z",
+  "generatedAt": "2026-09-26T09:43:48.606Z",
   "osmTimestamp": "2026-09-24T20:21:20Z",
   "sources": {
     "osm": {
@@ -102,5 +102,6 @@
     "dropped": 1276,
     "islands": 2993
   },
-  "license": "ODbL 1.0 (© OpenStreetMap contributors)"
+  "license": "ODbL 1.0 (© OpenStreetMap contributors)",
+  "pmtilesSha256": "0c2928fe583416b16f0cd89c5ed44cf36ecda7647a02571e3d448f7055b7e1eb"
 }

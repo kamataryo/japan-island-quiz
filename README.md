@@ -65,7 +65,7 @@ pnpm data
 - `/tiles/{z}/{x}/{y}.mvt`: R2 に置いた `base.pmtiles` からタイルを1枚ずつ返す（静的アセットは Range リクエストに対応していないため）
 - `/api/answers`: 島ごとの正答率の集計（D1）
 
-`base.pmtiles` は大きいのでリポジトリに入れず、**最新の Release** の asset から取って R2 に上げます。
+`base.pmtiles` は大きいのでリポジトリに入れず、`meta.json` に対応する Release（タグ `YYYY-MM-DD-{sha256 の先頭12桁}`）の asset から取って R2 に上げます。asset の sha256 が `meta.json` の `pmtilesSha256` と違うとデプロイは失敗します。
 
 初回だけ、次を行ってください。
 
@@ -81,12 +81,12 @@ pnpm wrangler r2 object put japan-island-quiz/base.pmtiles --file public/data/ba
 pnpm build && pnpm wrangler dev
 ```
 
-データを作り直したら、`islands.json` と `base.pmtiles` の組み合わせがずれないよう、コミットと同時に Release を作ります（`islands.json` の島 ID と PMTiles の `id` 属性で出題中の島をハイライトしているため）。
+データを作り直したら、`islands.json` と `base.pmtiles` の組み合わせがずれないよう、push の前に Release を作ります（`islands.json` の島 ID と PMTiles の `id` 属性で出題中の島をハイライトしているため）。
 
 ```sh
 pnpm data
 git commit ...   # public/data/islands.json, meta.json
-gh release create data-YYYY-MM-DD public/data/base.pmtiles
+pnpm release-pmtiles
 git push
 ```
 
