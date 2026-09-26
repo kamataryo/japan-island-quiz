@@ -72,8 +72,18 @@ const PREFECTURES = new Set(
     "熊本県 大分県 宮崎県 鹿児島県 沖縄県"
   ).split(" "),
 );
-/** これより小さい水域はタイルに入れない */
-const WATER_MIN_KM2 = 0.01;
+/** これより小さい水域（ため池など）はタイルに入れない。PMTiles を Workers の上限 25MiB 未満に収めるためでもある */
+const WATER_MIN_KM2 = 0.05;
+
+/**
+ * 水域を表示し始めるズーム。画面上で一辺がおよそ 4px になってから出す
+ * （--no-tiny-polygon-reduction で極小の島を残しているため、引いた地図で小さな池が点々と残って見えるのを防ぐ）
+ */
+function waterMinZoom(km2: number): number {
+  const side = Math.sqrt(km2) * 1000; // m
+  // 日本付近（北緯35度）で、ズーム z の 1px ≒ 64,000 / 2^z m
+  return Math.max(3, Math.ceil(Math.log2((4 * 64_000) / side)));
+}
 
 type Area = Feature<Polygon | MultiPolygon>;
 
@@ -319,8 +329,11 @@ async function main() {
         });
       else if (isArea(f)) polyIslands.push({ id, tags, f });
     } else if (isArea(f) && tags.natural === "water") {
-      if (area(f) / 1e6 >= WATER_MIN_KM2)
-        water.write(`${JSON.stringify({ ...f, properties: {} })}\n`);
+      const km2 = area(f) / 1e6;
+      if (km2 >= WATER_MIN_KM2)
+        water.write(
+          `${JSON.stringify({ ...f, properties: {}, tippecanoe: { minzoom: waterMinZoom(km2) } })}\n`,
+        );
     } else if (
       isArea(f) &&
       tags.boundary === "administrative" &&

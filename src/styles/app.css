@@ -51,6 +51,15 @@
   font-size: 0.875rem;
 }
 
+/* みんなの正答率。集計を取れないときは行ごと消す */
+#stats {
+  margin: 0.25rem 0 0;
+}
+
+#stats:empty {
+  display: none;
+}
+
 .links a {
   display: inline-flex;
   align-items: center;

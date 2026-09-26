@@ -4,3 +4,4 @@ data/cache/
 *.log
 .DS_Store
 public/data/*.pmtiles
+.wrangler/

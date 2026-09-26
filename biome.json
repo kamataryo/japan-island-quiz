@@ -1,5 +1,5 @@
 {
   "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
-  "files": { "includes": ["**", "!public/data"] },
+  "files": { "includes": ["**", "!public/data", "!worker-configuration.d.ts"] },
   "formatter": { "indentStyle": "space", "indentWidth": 2 }
 }

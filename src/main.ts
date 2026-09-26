@@ -88,6 +88,26 @@ function viewing(x: Island): string {
     </p>`;
 }
 
+/**
+ * 回答を集計に送り、その島のみんなの正答率を文にして返す。
+ * 集計 API がない（vite dev など）・失敗したときは空文字（クイズはそのまま続けられる）
+ */
+async function record(x: Island, correct: boolean): Promise<string> {
+  try {
+    const res = await fetch("api/answers", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: x.id, correct }),
+    });
+    if (!res.ok) return "";
+    const s = (await res.json()) as { answers: number; correct: number };
+    const rate = Math.round((s.correct / s.answers) * 100);
+    return `${x.name}のみんなの正答率 ${rate}%（${s.answers.toLocaleString("ja-JP")}回答）`;
+  } catch {
+    return "";
+  }
+}
+
 // ---- 画面 ----
 
 async function main() {
@@ -236,7 +256,13 @@ async function main() {
         const last = q + 1 >= questions.length;
         $("#feedback").innerHTML = `
           <div id="viewing">${viewing(island)}</div>
+          <p id="stats" class="caption"></p>
           <p class="next"><button class="btn" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>`;
+        // 次の問題へ進んだ後に返ってきても、古い要素に書くだけで害はない
+        const stats = $("#stats");
+        record(island, correct).then((text) => {
+          stats.textContent = text;
+        });
         const next = $("#next");
         next.addEventListener("click", () => (last ? result() : ask(q + 1)));
         next.focus();

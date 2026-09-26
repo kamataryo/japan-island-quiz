@@ -1,2 +1,5 @@
+allowBuilds:
+  esbuild: true
+  workerd: true
 # 公開から30日（分単位）経っていないバージョンはインストールしない
 minimumReleaseAge: 43200
