@@ -13,12 +13,6 @@ export type Mode = {
   polygon?: number[][];
 };
 
-/**
- * 地域モードは帯を混ぜて出すので、均等だと小さな岩ばかりになる。面積^0.5 で大きい島を出やすくする
- * （瀬戸内海で 1ゲームの内訳が おおよそ かんたん1.5・ふつう4.4・むずい3.5・おに0.6 問になる）
- */
-const regionWeight = (x: Island) => x.areaKm2 ** 0.5;
-
 export function buildModes(islands: Island[]): {
   bands: Mode[];
   areas: Mode[];
@@ -36,7 +30,9 @@ export function buildModes(islands: Island[]): {
       name: r.name,
       questions: xs,
       choices: xs,
-      weight: regionWeight,
+      // 帯を混ぜて出すので、均等だと小さな岩ばかりになる。面積^weightExponent で大きい島を出やすくする
+      // （地域ごとに島の大きさの分布が違うので指数も地域ごとに決める）
+      weight: (x) => x.areaKm2 ** r.weightExponent,
       polygon: r.polygon,
     };
   });
