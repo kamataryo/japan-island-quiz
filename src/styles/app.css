@@ -33,7 +33,6 @@
 
 .app__map {
   height: var(--map-h);
-  border-inline: 2px solid var(--c-btn-dark);
 }
 
 /*
@@ -72,6 +71,16 @@
 }
 
 /* 島名を太字で立て、その下に都道府県・面積・人口を「項目名 値」で横に並べる（狭い画面では折り返す） */
+/* 島名の右の「報告」と文字のベースラインでそろえる（大きさが違うので中央だと「報告」が浮いて見える）。上の余白は p ではなく行に付ける */
+#viewing .island-name {
+  align-items: baseline;
+  margin-top: 0.25rem;
+}
+
+#viewing .island-name > p {
+  margin: 0;
+}
+
 #viewing .island-name strong {
   font-size: 1.125rem;
 }
@@ -124,6 +133,46 @@
   gap: 0.25em;
   align-items: center;
   min-height: 1.5rem;
+}
+
+/*
+ * 島名の右の「報告」。間違いを直す・知らせるリンクを畳んでおく。リンクと同じく 24px。
+ * 開いたら島名の行を崩さないよう、下に重ねて出す
+ */
+.report {
+  position: relative;
+  font-size: 0.875rem;
+}
+
+/* ベースラインを文字に合わせるため flex にせず、行の高さで 24px を確保する */
+.report summary {
+  display: inline-block;
+  line-height: 1.5rem;
+  color: var(--c-link);
+  cursor: pointer;
+  list-style: none;
+}
+
+.report summary .external {
+  margin-right: 0.25em;
+  vertical-align: -0.125em;
+}
+
+.report summary::-webkit-details-marker {
+  display: none;
+}
+
+#viewing .report p {
+  position: absolute;
+  z-index: 1;
+  top: 100%;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--c-btn-shadow);
+  background: var(--c-paper);
 }
 
 /* 新しいタブで開くアイコン。文字の大きさに合わせる */

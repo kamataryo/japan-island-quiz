@@ -75,7 +75,10 @@ function describe(x: Island): string {
 /** 新しいタブで開くリンクの印（四角から右上へ矢印が出るアイコン）と、読み上げ用の説明 */
 const newTab = `<svg class="external" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square"><path d="M7 3H3v10h10V9M9 2h5v5M14 2 7 9"/></svg><span class="visually-hidden">（新しいタブで開く）</span>`;
 
-/** 地図に表示中の島の説明と、外部サイトへのリンク */
+/** 間違いの報告の印（旗のアイコン） */
+const flag = `<svg class="external" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 15V2M3 3h9l-2 3 2 3H3"/></svg>`;
+
+/** 地図に表示中の島の説明と、外部サイトへのリンク。間違いを直す・知らせるリンクは行が詰まるので、島名の右の「報告」の中に畳む */
 function viewing(x: Island): string {
   const [lng, lat] = x.center;
   // 島名で検索すると別の場所に当たることがあるので、島の上の代表点で開く
@@ -83,8 +86,25 @@ function viewing(x: Island): string {
   const wiki =
     x.wikipedia &&
     `https://ja.wikipedia.org/wiki/${encodeURIComponent(x.wikipedia)}`;
+  // id は OSM の要素の種類の頭文字（n/w/r）＋番号。島の属性はほぼこの要素のタグから作っている
+  const osm = `https://www.openstreetmap.org/${{ n: "node", w: "way", r: "relation" }[x.id[0]]}/${x.id.slice(1)}`;
+  const report = `https://github.com/kamataryo/japan-island-quiz/issues/new?${new URLSearchParams(
+    {
+      title: `島の情報の間違い: ${x.name}（${x.id}）`,
+      body: `- 島: ${x.name}（${x.id}）\n- OSM: ${osm}\n- 代表点: ${lat},${lng}\n\n## 間違っている内容（名前・読み・都道府県・市区町村・面積・人口など）\n\n\n## 正しい内容と根拠\n\n`,
+    },
+  )}`;
   return `
-    <p class="island-name"><strong>${esc(x.name)}</strong>${x.yomi ? `<small>（${esc(x.yomi)}）</small>` : ""}</p>
+    <div class="row island-name">
+      <p><strong>${esc(x.name)}</strong>${x.yomi ? `<small>（${esc(x.yomi)}）</small>` : ""}</p>
+      <details class="report">
+        <summary title="情報の間違いを直す・知らせる">${flag}報告<span class="visually-hidden">（情報の間違いを直す・知らせる）</span></summary>
+        <p class="links">
+          <a href="${esc(osm)}" target="_blank" rel="noopener">OSM で確認・修正${newTab}</a>
+          <a href="${esc(report)}" target="_blank" rel="noopener">間違いを報告${newTab}</a>
+        </p>
+      </details>
+    </div>
     <dl class="facts">
       ${facts(x)
         .map(
