@@ -67,6 +67,21 @@ function show() {
   for (const id of ["target-fill", "target-casing", "target-line"]) {
     map.setFilter(id, filter as never);
   }
+  // 島の塗りと輪郭も凡例の帯の色にする
+  const color = [
+    "case",
+    ...BAND_COLORS.flatMap((c, i) => [
+      [
+        "in",
+        ["get", "id"],
+        ["literal", xs.filter((x) => x.band === i).map((x) => x.id)],
+      ],
+      c,
+    ]),
+    "#000",
+  ];
+  map.setPaintProperty("target-fill", "fill-color", color);
+  map.setPaintProperty("target-line", "line-color", color);
   (map.getSource("points") as GeoJSONSource).setData({
     type: "FeatureCollection",
     features: xs.map((x) => ({

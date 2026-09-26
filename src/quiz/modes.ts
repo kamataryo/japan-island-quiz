@@ -17,10 +17,16 @@ export function buildModes(islands: Island[]): {
   bands: Mode[];
   areas: Mode[];
 } {
-  const bands: Mode[] = config.bands.map((b, i) => ({
+  const counts = config.bands.map(
+    (_, i) => islands.filter((x) => x.band === i).length,
+  );
+  // 選んだ帯を主に、それより易しい帯も mix の割合で混ぜる
+  // （帯ごとの島数の差を打ち消すよう、割合を島数で割って1島あたりの重みにする）
+  const bands: Mode[] = config.bands.map((b) => ({
     name: b.name,
-    questions: islands.filter((x) => x.band === i),
+    questions: islands.filter((x) => x.band < b.mix.length),
     choices: islands,
+    weight: (x) => b.mix[x.band] / counts[x.band],
   }));
   // 地域モードは難易度を問わず出題し、選択肢も地域内の島から作る
   // （外の島が混ざると、それだけで不正解と分かってしまうため）
