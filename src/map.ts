@@ -79,8 +79,6 @@ function style(): StyleSpecification {
               // データのある範囲（scripts/data/pipeline.ts の CLIP_BBOX）。外側はリクエストしない
               bounds: [120, 19.5, 156, 50],
             }),
-        attribution:
-          '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>',
       },
       marker: {
         type: "geojson",
@@ -207,15 +205,11 @@ function addTerrain(map: MapLibreMap): void {
     minzoom: 1,
     maxzoom: 14,
     encoding: "terrarium",
-    attribution:
-      '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル（標高タイル）を加工して作成</a>',
   });
   // 国土地理院最適化ベクトルタイル（試験公開）。等高線の Cntr レイヤーだけ使う（z9〜）
   map.addSource("gsi", {
     type: "vector",
     url: "pmtiles://https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/optimal_bvmap-v1.pmtiles",
-    attribution:
-      '<a href="https://github.com/gsi-cyberjapan/optimal_bvmap">国土地理院最適化ベクトルタイル</a>',
   });
   // 陰影と等高線は黄色い塗りの上に重ね、出題中の島でも地形が見えるようにする。
   // 赤い太線は最前面に置くので埋もれない
@@ -249,6 +243,13 @@ function addTerrain(map: MapLibreMap): void {
   );
 }
 
+// MapLibre はソースごとの出典を文字数の短い順に並べるので、ソースには持たせずここで順番を決める。
+// 地理院の分は読み込みに失敗しても出したままにする
+const ATTRIBUTION = [
+  '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>',
+  '地理院タイル（<a href="https://maps.gsi.go.jp/development/ichiran.html">標高</a>を加工、<a href="https://github.com/gsi-cyberjapan/optimal_bvmap">最適化ベクトル</a>）',
+].join(" | ");
+
 export function createMap(container: HTMLElement): Promise<MapLibreMap> {
   const map = new MapLibreMap({
     container,
@@ -259,7 +260,7 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
     minZoom: MIN_ZOOM,
     maxZoom: 16,
     // 出典は最初は開いて見せ、遊び始めたら i アイコンにたたむ（collapseAttribution）
-    attributionControl: { compact: true },
+    attributionControl: { compact: true, customAttribution: ATTRIBUTION },
     dragRotate: false,
     pitchWithRotate: false,
     touchPitch: false,

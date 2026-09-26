@@ -110,8 +110,8 @@ git push
 | [OpenStreetMap](https://www.openstreetmap.org/copyright)（[Geofabrik の日本抽出](https://download.geofabrik.de/asia/japan.html)） | 島・水域・都道府県 | ODbL 1.0。画面に「© OpenStreetMap contributors」 |
 | [osmdata.openstreetmap.de の land polygons](https://osmdata.openstreetmap.de/data/land-polygons.html) | 陸地 | OSM 由来なので ODbL 1.0（上の表示に含まれる） |
 | [Wikidata](https://www.wikidata.org/) | 知名度・人口・Wikipedia の記事名 | CC0（表示義務なし） |
-| [国土地理院 標高タイル](https://maps.gsi.go.jp/development/ichiran.html)（`dem_png`、DEM10B） | 陰影（ブラウザで terrarium 形式に変換して描画） | [国土地理院コンテンツ利用規約](https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html)（公共データ利用規約 第1.0版）。出典の記載のみで申請不要。加工しているので、画面に「地理院タイル（標高タイル）を加工して作成」 |
-| [国土地理院 最適化ベクトルタイル](https://github.com/gsi-cyberjapan/optimal_bvmap)（試験公開） | 等高線（`Cntr` レイヤー） | 同上の利用規約。画面に「国土地理院最適化ベクトルタイル」。試験公開のため、URL やデータ構成が変わることがある |
+| [国土地理院 標高タイル](https://maps.gsi.go.jp/development/ichiran.html)（`dem_png`、DEM10B） | 陰影（ブラウザで terrarium 形式に変換して描画） | [国土地理院コンテンツ利用規約](https://www.gsi.go.jp/kikakuchousei/kikakuchousei40182.html)（公共データ利用規約 第1.0版）。出典の記載のみで申請不要。加工しているので、画面に「地理院タイル（標高を加工、最適化ベクトル）」とまとめて表示 |
+| [国土地理院 最適化ベクトルタイル](https://github.com/gsi-cyberjapan/optimal_bvmap)（試験公開） | 等高線（`Cntr` レイヤー） | 同上の利用規約。画面の表示は上の行にまとめている。試験公開のため、URL やデータ構成が変わることがある |
 
 国土地理院のタイルは、ブラウザから直接読み込みます（こちらで再配布はしていません）。
 
