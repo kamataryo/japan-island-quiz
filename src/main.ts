@@ -167,7 +167,10 @@ async function main() {
       const island = questions[q];
       const choices = pickChoices(island, mode.choices, Math.random);
       const status = `${q + 1} / ${questions.length} 問目`;
-      progress.textContent = `${status}・${mode.name}・正解 ${answers.filter((a) => a.choice === a.island).length}`;
+      const showProgress = () => {
+        progress.textContent = `${status}・${mode.name}・正解 ${answers.filter((a) => a.choice === a.island).length}`;
+      };
+      showProgress();
       showIsland(
         map,
         island,
@@ -214,6 +217,7 @@ async function main() {
       const answer = (choice: Island) => {
         answered = true;
         answers.push({ island, choice });
+        showProgress();
         const correct = choice === island;
         buttons.forEach((b, i) => {
           const c = choices[i];

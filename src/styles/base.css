@@ -135,6 +135,8 @@ a {
   gap: 0.75rem;
   align-items: center;
   width: 100%;
+  /* 「○ 正解」で折り返したボタンがあっても、同じ行のボタンと高さを揃える */
+  height: 100%;
   text-align: left;
   font-size: 1.125rem;
 }
