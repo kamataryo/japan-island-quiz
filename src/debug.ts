@@ -91,8 +91,8 @@ function show() {
     ]),
     "#000",
   ];
-  map.setPaintProperty("target-fill", "fill-color", color);
-  map.setPaintProperty("target-line", "line-color", color);
+  map.setPaintProperty("target-fill", "fill-color", color as never);
+  map.setPaintProperty("target-line", "line-color", color as never);
   (map.getSource("points") as GeoJSONSource).setData({
     type: "FeatureCollection",
     features: xs.map((x) => ({
