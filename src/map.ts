@@ -267,7 +267,10 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
     // 地図は目で見るための要素なので、Tab の移動先にしない
     keyboard: false,
     renderWorldCopies: false,
-    locale: { "NavigationControl.ZoomIn": "拡大", "NavigationControl.ZoomOut": "縮小" },
+    locale: {
+      "NavigationControl.ZoomIn": "拡大",
+      "NavigationControl.ZoomOut": "縮小",
+    },
   });
   map.touchZoomRotate.disableRotation();
   // 地図を動かせることに気づいてもらうため、＋−ボタンを常に出す

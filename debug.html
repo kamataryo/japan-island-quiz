@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>出題範囲の確認 | 日本の島クイズ</title>
+    <style>
+      body {
+        margin: 0;
+      }
+      #map {
+        height: 100dvh;
+      }
+      #panel {
+        position: absolute;
+        top: 0.5rem;
+        left: 0.5rem;
+        z-index: 1;
+        padding: 0.5rem 0.75rem;
+        background: var(--c-paper);
+        border: 1px solid var(--c-btn-dark);
+        font-size: 0.875rem;
+      }
+      #panel table {
+        border-collapse: collapse;
+      }
+      #panel td {
+        padding: 0 0.5rem 0 0;
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="panel">
+      <label>モード <select id="mode"></select></label>
+      <div id="stats"></div>
+    </div>
+    <div id="map"></div>
+    <script type="module" src="/src/debug.ts"></script>
+  </body>
+</html>
