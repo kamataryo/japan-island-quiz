@@ -1,16 +1,16 @@
 {
   "weights": {
-    "area": 0.5,
-    "fame": 0.3,
-    "inhabited": 0.1,
-    "shape": 0.05,
-    "density": 0.05
+    "area": 0.4,
+    "fame": 0.5,
+    "inhabited": 0.05,
+    "shape": 0.025,
+    "density": 0.025
   },
   "bands": [
-    { "name": "かんたん", "fraction": 0.05 },
-    { "name": "ふつう", "fraction": 0.15 },
+    { "name": "かんたん", "fraction": 0.02 },
+    { "name": "ふつう", "fraction": 0.08 },
     { "name": "むずかしい", "fraction": 0.3 },
-    { "name": "おに", "fraction": 0.5 }
+    { "name": "おに", "fraction": 0.6 }
   ],
   "density": {
     "radiusKm": 30,

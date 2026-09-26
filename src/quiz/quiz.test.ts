@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Island } from "../../scripts/data/pipeline.ts";
 import {
-  countNames,
-  displayName,
   levenshtein,
   nameSimilarity,
   pickChoices,
@@ -103,10 +101,13 @@ describe("pickChoices", () => {
     expect(pickChoices(answer, [answer, pool[2]], rng())).toHaveLength(2);
   });
 
-  it("同名の島が複数ある名前には都道府県を添える", () => {
-    const counts = countNames(pool);
-    expect(displayName(answer, counts)).toBe("大島（東京都）");
-    expect(displayName(pool[2], counts)).toBe("利島");
+  it("不正解は正解と同じか易しい帯の島だけ", () => {
+    const hard = island({ name: "難島", band: 3, center: [139.4, 34.7] });
+    const pool2 = [hard, island({ name: "岩", band: 3 }), ...pool];
+    const easy = island({ name: "易島", band: 0, center: [139.4, 34.7] });
+    for (let seed = 1; seed < 20; seed++) {
+      expect(pickChoices(easy, [easy, ...pool2], rng(seed)).every((c) => c.band === 0)).toBe(true);
+    }
   });
 });
 

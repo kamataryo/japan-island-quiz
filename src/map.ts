@@ -17,8 +17,10 @@ import type { Island } from "../scripts/data/pipeline.ts";
 setWorkerUrl(workerUrl);
 addProtocol("pmtiles", new Protocol().tile);
 
-/** これより小さく写る島にはマーカー（赤い円）を重ねる */
-const MIN_ISLAND_PX = 16;
+/** マーカー（赤い円）の半径 px。島の外接円がこれより小さく写るときだけ表示する */
+const MARKER_RADIUS = 16;
+/** タイルは z3 から。これより引くと地図が消える */
+const MIN_ZOOM = 3;
 
 const token = (name: string) =>
   getComputedStyle(document.documentElement)
@@ -119,7 +121,7 @@ function style(): StyleSpecification {
         type: "circle",
         source: "marker",
         paint: {
-          "circle-radius": 16,
+          "circle-radius": MARKER_RADIUS,
           "circle-color": "rgba(0, 0, 0, 0)",
           "circle-stroke-color": token("highlight"),
           "circle-stroke-width": 3,
@@ -134,6 +136,8 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
     container,
     style: style(),
     bounds: [128, 26, 146, 45],
+    minZoom: MIN_ZOOM,
+    maxZoom: 16,
     attributionControl: { compact: false },
     dragRotate: false,
     pitchWithRotate: false,
@@ -158,6 +162,32 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
   });
 }
 
+let target: Island | undefined;
+let markerKey = "";
+
+/**
+ * 島の bbox の外接円（中心と半径）が画面上でマーカーより小さいときだけ、マーカーを bbox の中心に出す。
+ * ズームのたびに呼び、寄って島がマーカーより大きく写ったら消す
+ */
+function updateMarker(map: MapLibreMap) {
+  const marker = map.getSource("marker") as GeoJSONSource;
+  if (!target) return;
+  const [w, s, e, n] = target.bbox;
+  const center: [number, number] = [(w + e) / 2, (s + n) / 2];
+  const c = map.project(center);
+  const corner = map.project([e, n]);
+  const show = Math.hypot(corner.x - c.x, corner.y - c.y) < MARKER_RADIUS;
+  // ズーム中は毎フレーム呼ばれるので、表示状態が変わったときだけ更新する
+  const key = show ? target.id : "";
+  if (key === markerKey) return;
+  markerKey = key;
+  marker.setData(
+    show
+      ? { type: "Point", coordinates: center }
+      : { type: "FeatureCollection", features: [] },
+  );
+}
+
 export function showIsland(
   map: MapLibreMap,
   island: Island,
@@ -167,15 +197,8 @@ export function showIsland(
   const filter: FilterSpecification = ["==", ["get", "id"], island.id];
   map.setFilter("target-fill", filter);
   map.setFilter("target-line", filter);
-  const marker = map.getSource("marker") as GeoJSONSource;
-  marker.setData({ type: "FeatureCollection", features: [] });
-  map.once("moveend", () => {
-    const [w, s, e, n] = island.bbox;
-    const a = map.project([w, s]);
-    const b = map.project([e, n]);
-    if (Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)) < MIN_ISLAND_PX) {
-      marker.setData({ type: "Point", coordinates: island.center });
-    }
-  });
+  if (!target) map.on("zoom", () => updateMarker(map));
+  target = island;
+  updateMarker(map);
   map.fitBounds(bounds, { padding: 16, duration: animate ? 800 : 0 });
 }

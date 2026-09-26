@@ -3,7 +3,7 @@ import "./styles/app.css";
 import config from "../config/difficulty.json";
 import type { Island } from "../scripts/data/pipeline.ts";
 import { createMap, showIsland } from "./map.ts";
-import { countNames, displayName, pickChoices } from "./quiz/choices.ts";
+import { pickChoices } from "./quiz/choices.ts";
 import { pickQuestions } from "./quiz/game.ts";
 import { questionBounds } from "./quiz/zoom.ts";
 
@@ -16,8 +16,6 @@ const panel = $("#panel");
 const progress = $("#progress");
 const live = $("#live");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
-
-const settings = { sound: false };
 
 type Answer = { island: Island; choice: Island };
 
@@ -39,25 +37,16 @@ function formatArea(km2: number): string {
   return `約${Math.round(km2 * 1e6).toLocaleString("ja-JP")}m²`;
 }
 
-// ---- 効果音（「ピンポーン」。最初は OFF） ----
-
-let audio: AudioContext | undefined;
-function chime() {
-  audio ??= new AudioContext();
-  const t0 = audio.currentTime;
-  for (const [freq, at] of [
-    [988, 0],
-    [784, 0.2],
-  ]) {
-    const osc = audio.createOscillator();
-    const gain = audio.createGain();
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.15, t0 + at);
-    gain.gain.exponentialRampToValueAtTime(0.001, t0 + at + 0.6);
-    osc.connect(gain).connect(audio.destination);
-    osc.start(t0 + at);
-    osc.stop(t0 + at + 0.6);
-  }
+/** 答え合わせで出す島の詳細（読み・都道府県・面積・人口） */
+function describe(x: Island): string {
+  return [
+    x.yomi && `読み: ${x.yomi}`,
+    x.pref,
+    `面積 ${formatArea(x.areaKm2)}`,
+    x.population && `人口 ${x.population.toLocaleString("ja-JP")}人`,
+  ]
+    .filter(Boolean)
+    .join("・");
 }
 
 // ---- 画面 ----
@@ -77,7 +66,6 @@ async function main() {
     panel.innerHTML = `<p class="feedback feedback--wrong" role="alert">× データを読み込めませんでした（${esc(String(e))}）</p>`;
     return;
   }
-  const nameCounts = countNames(islands);
 
   function start() {
     progress.textContent = "";
@@ -92,11 +80,7 @@ async function main() {
           </button></li>`,
         ).join("")}
       </ul>
-      <p><label class="check"><input type="checkbox" id="sound" ${settings.sound ? "checked" : ""} />正解の効果音（ピンポーン）を鳴らす</label></p>
       <p class="caption">数字キー 1〜4 でも選べます。</p>`;
-    $("#sound").addEventListener("change", (e) => {
-      settings.sound = (e.target as HTMLInputElement).checked;
-    });
     for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-band]")) {
       b.addEventListener("click", () => play(Number(b.dataset.band)));
     }
@@ -125,7 +109,7 @@ async function main() {
             .map(
               (c, i) => `
             <li><button class="btn choice" type="button" data-key="${i + 1}" data-index="${i}">
-              <kbd>${i + 1}</kbd><span>${esc(displayName(c, nameCounts))}</span>
+              <kbd>${i + 1}</kbd><span>${esc(c.name)}</span>
             </button></li>`,
             )
             .join("")}
@@ -134,52 +118,51 @@ async function main() {
       const buttons = [
         ...panel.querySelectorAll<HTMLButtonElement>("[data-index]"),
       ];
+      let answered = false;
       for (const b of buttons) {
         b.addEventListener("click", () => {
-          if (b.getAttribute("aria-disabled") === "true") return;
-          answer(choices[Number(b.dataset.index)]);
+          const c = choices[Number(b.dataset.index)];
+          if (answered) review(c);
+          else answer(c);
         });
       }
       buttons[0]?.focus();
       announce(`${status}。太い線で囲まれた島はどれ？`);
 
+      /** 回答後に選択肢を押すと、その島へ移動して詳しく見られる（誤答も学びに使う） */
+      const review = (c: Island) => {
+        showIsland(map, c, questionBounds(c.bbox, () => 0.5), !reduceMotion.matches);
+        buttons.forEach((b, i) => {
+          b.setAttribute("aria-pressed", String(choices[i] === c));
+        });
+        const text = `地図に表示中: ${c.name}（${describe(c)}）`;
+        $("#viewing").textContent = text;
+        announce(text);
+      };
+
       const answer = (choice: Island) => {
+        answered = true;
         answers.push({ island, choice });
         const correct = choice === island;
         buttons.forEach((b, i) => {
-          b.setAttribute("aria-disabled", "true");
-          b.removeAttribute("data-key");
           const c = choices[i];
-          const mark =
-            c === island ? "○ 正解" : c === choice ? "× あなたの答え" : "";
+          b.setAttribute("aria-pressed", String(c === island));
+          const mark = c === island ? "○ 正解" : c === choice ? "× あなたの答え" : "";
           if (!mark) return;
           b.dataset.result = c === island ? "correct" : "wrong";
-          b.insertAdjacentHTML(
-            "beforeend",
-            `<span class="mark">${mark}</span>`,
-          );
+          b.insertAdjacentHTML("beforeend", `<span class="mark">${mark}</span>`);
         });
-        const name = displayName(island, nameCounts);
-        const head = correct ? "○ 正解！" : `× 不正解… 正解は ${name}`;
-        const detail = [
-          island.yomi && `読み: ${island.yomi}`,
-          island.pref,
-          `面積 ${formatArea(island.areaKm2)}`,
-          island.population &&
-            `人口 ${island.population.toLocaleString("ja-JP")}人`,
-        ]
-          .filter(Boolean)
-          .join("・");
+        const head = correct ? "○ 正解！" : `× 不正解… 正解は ${island.name}`;
         const last = q + 1 >= questions.length;
         $("#feedback").innerHTML = `
           <p class="feedback feedback--${correct ? "correct" : "wrong"}">${esc(head)}</p>
-          <p>${esc(name)}（${esc(detail)}）</p>
+          <p id="viewing">${esc(`地図に表示中: ${island.name}（${describe(island)}）`)}</p>
+          <p class="caption">選択肢を押すと、その島を地図で確かめられます。</p>
           <p class="next"><button class="btn" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>`;
         const next = $("#next");
         next.addEventListener("click", () => (last ? result() : ask(q + 1)));
         next.focus();
-        announce(`${head}。${name}、${detail}`);
-        if (correct && settings.sound) chime();
+        announce(`${head}。${island.name}、${describe(island)}`);
       };
     };
 
@@ -188,18 +171,33 @@ async function main() {
       progress.textContent = `結果・${BANDS[band]}`;
       panel.innerHTML = `
         <h2 tabindex="-1" id="result">${score} / ${answers.length} 問正解</h2>
-        <ol class="result-list">
-          ${answers
-            .map((a) => {
-              const ok = a.choice === a.island;
-              return `<li>${ok ? "○" : "×"} ${esc(displayName(a.island, nameCounts))}${
-                ok
-                  ? ""
-                  : `（あなたの答え: ${esc(displayName(a.choice, nameCounts))}）`
-              }</li>`;
-            })
-            .join("")}
-        </ol>
+        <div class="table-wrap">
+          <table class="result-table">
+            <thead>
+              <tr>
+                <th scope="col">問</th>
+                <th scope="col">結果</th>
+                <th scope="col">正解の島</th>
+                <th scope="col">都道府県</th>
+                <th scope="col">あなたの答え</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${answers
+                .map((a, i) => {
+                  const ok = a.choice === a.island;
+                  return `<tr class="result--${ok ? "correct" : "wrong"}">
+                    <td>${i + 1}</td>
+                    <td class="result__mark">${ok ? "○ 正解" : "× 不正解"}</td>
+                    <th scope="row">${esc(a.island.name)}</th>
+                    <td>${esc(a.island.pref ?? "")}</td>
+                    <td>${esc(a.choice.name)}</td>
+                  </tr>`;
+                })
+                .join("")}
+            </tbody>
+          </table>
+        </div>
         <p class="row">
           <button class="btn" type="button" id="again">もう一度（${esc(BANDS[band])}）</button>
           <button class="btn" type="button" id="back">難易度を選ぶ</button>

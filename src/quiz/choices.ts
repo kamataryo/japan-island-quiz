@@ -60,16 +60,12 @@ function top(xs: Island[], cost: (x: Island) => number, k = 8): Island[] {
 /**
  * 正解 + 不正解 (n-1) 個の選択肢を返す（順番はシャッフル済み）。
  * 不正解は「距離が近い島」「名前が似ている島」「同じ難易度帯の島」から順番に1つずつ選ぶ。
+ * 不正解は正解と同じか易しい帯の島に限る（かんたんの問題に無名の岩が混ざらないように）。
  * 正解と同名の島は入れず、選択肢どうしの名前も重複させない。
  */
-export function pickChoices(
-  answer: Island,
-  pool: readonly Island[],
-  rng: Rng,
-  n = 4,
-): Island[] {
+export function pickChoices(answer: Island, pool: readonly Island[], rng: Rng, n = 4): Island[] {
   const candidates = pool.filter(
-    (x) => x.id !== answer.id && x.name !== answer.name,
+    (x) => x.id !== answer.id && x.name !== answer.name && x.band <= answer.band,
   );
   const sources = [
     top(candidates, (x) => distSq(answer, x)),
@@ -80,8 +76,7 @@ export function pickChoices(
   const names = new Set([answer.name]);
   for (let k = 0; picked.length < n - 1; k++) {
     // 各候補群を数周しても埋まらなければ全体から選ぶ
-    const src =
-      k < sources.length * 3 ? sources[k % sources.length] : candidates;
+    const src = k < sources.length * 3 ? sources[k % sources.length] : candidates;
     const options = src.filter((x) => !names.has(x.name));
     if (options.length === 0) {
       if (src === candidates) break;
@@ -92,20 +87,4 @@ export function pickChoices(
     names.add(x.name);
   }
   return shuffle([answer, ...picked], rng);
-}
-
-export function countNames(pool: readonly Island[]): Map<string, number> {
-  const counts = new Map<string, number>();
-  for (const x of pool) counts.set(x.name, (counts.get(x.name) ?? 0) + 1);
-  return counts;
-}
-
-/** 同名の島が全国に複数ある名前には都道府県を添える */
-export function displayName(
-  x: Island,
-  nameCounts: Map<string, number>,
-): string {
-  return (nameCounts.get(x.name) ?? 0) > 1 && x.pref
-    ? `${x.name}（${x.pref}）`
-    : x.name;
 }

@@ -40,8 +40,50 @@
   justify-content: flex-end;
 }
 
-.result-list {
-  padding-left: 1.5rem;
+/* 結果の表。正誤は行の背景色に加えて「○ 正解」「× 不正解」の文字でも示す */
+.table-wrap {
+  overflow-x: auto;
+}
+
+.result-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.result-table th,
+.result-table td {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--c-btn-dark);
+  text-align: left;
+}
+
+.result-table thead th {
+  background: var(--c-btn-face);
+}
+
+.result-table tbody th {
+  font-weight: 400;
+}
+
+.result--correct {
+  background: var(--c-correct-bg);
+}
+
+.result--wrong {
+  background: var(--c-wrong-bg);
+}
+
+.result__mark {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.result--correct .result__mark {
+  color: var(--c-correct);
+}
+
+.result--wrong .result__mark {
+  color: var(--c-wrong);
 }
 
 /* 帰属表示は常に読めるよう、地図の上でも紙色の背景にする */
