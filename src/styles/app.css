@@ -154,3 +154,62 @@
 .maplibregl-ctrl-attrib a {
   color: var(--c-link);
 }
+
+/* 拡大縮小ボタン。ベベルボタンと同じ見た目にし、タップ領域を 44px にする */
+.maplibregl-ctrl-group:not(:empty) {
+  border: 2px solid var(--c-btn-dark);
+  border-radius: 0;
+  background: var(--c-btn-face);
+  box-shadow: none;
+}
+
+.maplibregl-ctrl-group button {
+  width: var(--tap);
+  height: var(--tap);
+  box-shadow:
+    inset 2px 2px 0 var(--c-btn-light),
+    inset -2px -2px 0 var(--c-btn-shadow);
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top: 2px solid var(--c-btn-dark);
+}
+
+.maplibregl-ctrl button:not(:disabled):active {
+  box-shadow:
+    inset 2px 2px 0 var(--c-btn-shadow),
+    inset -2px -2px 0 var(--c-btn-light);
+}
+
+.maplibregl-ctrl-group button:focus:focus-visible {
+  border-radius: 0;
+  box-shadow: none;
+  outline: 3px solid var(--c-focus);
+  outline-offset: -3px;
+}
+
+.maplibregl-ctrl button .maplibregl-ctrl-icon {
+  background-size: 100%;
+}
+
+.maplibregl-ctrl-scale {
+  background: var(--c-paper);
+  border-color: var(--c-ink);
+  color: var(--c-ink);
+  font-size: 0.75rem;
+}
+
+/* 初回だけ出す「地図を動かせます」の案内 */
+.pan-hint {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  z-index: 2;
+  translate: -50% -50%;
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--c-btn-dark);
+  background: var(--c-paper);
+  color: var(--c-ink);
+  text-align: center;
+  pointer-events: none;
+  box-shadow: 4px 4px 0 rgba(46, 39, 28, 0.4);
+}

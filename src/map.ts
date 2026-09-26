@@ -4,6 +4,8 @@ import {
   type GeoJSONSource,
   type LngLatBoundsLike,
   Map as MapLibreMap,
+  NavigationControl,
+  ScaleControl,
   type StyleSpecification,
   setWorkerUrl,
 } from "maplibre-gl";
@@ -264,8 +266,12 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
     // 地図は目で見るための要素なので、Tab の移動先にしない
     keyboard: false,
     renderWorldCopies: false,
+    locale: { "NavigationControl.ZoomIn": "拡大", "NavigationControl.ZoomOut": "縮小" },
   });
   map.touchZoomRotate.disableRotation();
+  // 地図を動かせることに気づいてもらうため、＋−ボタンを常に出す
+  map.addControl(new NavigationControl({ showCompass: false }));
+  map.addControl(new ScaleControl(), "bottom-left");
   map.getCanvas().tabIndex = -1;
   map.on("error", (e) => console.error(e.error));
   return new Promise((resolve, reject) => {
@@ -294,6 +300,28 @@ export function collapseAttribution(map: MapLibreMap): void {
     .getContainer()
     .querySelector(".maplibregl-ctrl-attrib")
     ?.classList.remove("maplibregl-compact-show");
+}
+
+const HINT_KEY = "panHintShown";
+
+/**
+ * 初めて遊ぶ人に、地図を動かせることを地図の上に重ねて知らせる（1回だけ）。
+ * 触れば地図をそのまま動かせるよう、クリックは下に通す。地図が次に動いたら消す
+ */
+export function showPanHint(map: MapLibreMap): void {
+  try {
+    if (localStorage.getItem(HINT_KEY)) return;
+    localStorage.setItem(HINT_KEY, "1");
+  } catch {
+    // 保存できない環境では毎回出す
+  }
+  const hint = document.createElement("div");
+  hint.className = "pan-hint";
+  hint.setAttribute("aria-hidden", "true");
+  hint.innerHTML =
+    "地図はドラッグで動かせます<br>＋−・ピンチ・ホイールで拡大縮小";
+  map.getContainer().append(hint);
+  map.once("movestart", () => hint.remove());
 }
 
 let target: Island | undefined;

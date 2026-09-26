@@ -3,7 +3,12 @@ import "./styles/app.css";
 import config from "../config/difficulty.json";
 import regions from "../config/regions.json";
 import type { Island } from "../scripts/data/pipeline.ts";
-import { collapseAttribution, createMap, showIsland } from "./map.ts";
+import {
+  collapseAttribution,
+  createMap,
+  showIsland,
+  showPanHint,
+} from "./map.ts";
 import { pickChoices } from "./quiz/choices.ts";
 import { islandsIn, pickQuestions } from "./quiz/game.ts";
 import { questionBounds } from "./quiz/zoom.ts";
@@ -194,6 +199,8 @@ async function main() {
       showProgress();
       // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
       showIsland(map, island, questionBounds(island.bbox, Math.random), false);
+      // 出題の移動より後に出す（移動で消えないように）
+      if (q === 0) showPanHint(map);
       panel.innerHTML = `
         <h2 class="prompt">太い線で囲まれた島はどれ？</h2>
         <ul class="choices">
