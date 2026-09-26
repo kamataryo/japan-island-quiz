@@ -1,10 +1,11 @@
 /**
  * 静的アセットの配信に加えて、次の2つを Worker で処理する（wrangler.jsonc の run_worker_first）。
- * - /tiles/{z}/{x}/{y}.mvt: R2 に置いた base.pmtiles から1枚ずつ返す
+ * - /tiles/{版}/{z}/{x}/{y}.mvt: R2 に置いた base.pmtiles から1枚ずつ返す（版は TILES_VERSION）
  * - /api/answers: 島ごとの正答率の集計（POST で回答を足し、GET ?ids= で1ゲーム分をまとめて読む）
  */
 import { PMTiles, type RangeResponse, type Source } from "pmtiles";
 import islands from "../public/data/islands.json";
+import { TILES_VERSION } from "../src/tiles-version.ts";
 
 const IDS = new Set(islands.map((x) => x.id));
 
@@ -57,16 +58,26 @@ class R2Source implements Source {
 
 let archive: PMTiles | undefined;
 
-const TILE = /^\/tiles\/(\d+)\/(\d+)\/(\d+)\.mvt$/;
+const TILE = /^\/tiles\/(?:([0-9a-f]+)\/)?(\d+)\/(\d+)\/(\d+)\.mvt$/;
 
-async function tile(env: Env, z: number, x: number, y: number) {
+async function tile(
+  env: Env,
+  version: string | undefined,
+  z: number,
+  x: number,
+  y: number,
+) {
   archive ??= new PMTiles(new R2Source(env.TILES, "base.pmtiles"));
   // getZxy は gzip を解いて返す。転送時の圧縮は Cloudflare に任せる
   const t = await archive.getZxy(z, x, y);
   const headers = {
     "content-type": "application/x-protobuf",
-    // ponytail: URL にデータの版を含めていないので1日で切る。データを作り直した直後は、最大1日古いタイルが混ざりうる
-    "cache-control": "public, max-age=86400",
+    // 版が一致すれば中身は変わらないので長くキャッシュさせる。
+    // 版なし・古い版（デプロイ前に開いたページ）には今のデータを返すが、別の版の中身なのでキャッシュさせない
+    "cache-control":
+      version === TILES_VERSION
+        ? "public, max-age=31536000, immutable"
+        : "no-store",
   };
   // 海など、タイルがない場所は 204（MapLibre は空のタイルとして扱い、エラーにしない）
   if (!t) return new Response(null, { status: 204, headers });
@@ -113,7 +124,7 @@ export default {
   async fetch(req, env) {
     const { pathname } = new URL(req.url);
     const m = pathname.match(TILE);
-    if (m) return tile(env, +m[1], +m[2], +m[3]);
+    if (m) return tile(env, m[1], +m[2], +m[3], +m[4]);
     if (pathname === "/api/answers") return answer(req, env);
     return env.ASSETS.fetch(req);
   },
