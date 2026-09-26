@@ -26,6 +26,14 @@
   border-inline: 2px solid var(--c-btn-dark);
 }
 
+.app__mode {
+  gap: 0.5rem;
+  justify-content: flex-end;
+  padding: 0.5rem;
+  border-inline: 2px solid var(--c-btn-dark);
+  background: var(--c-panel);
+}
+
 .app__panel {
   flex: 1;
 }

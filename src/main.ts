@@ -2,7 +2,7 @@ import "./styles/base.css";
 import "./styles/app.css";
 import config from "../config/difficulty.json";
 import type { Island } from "../scripts/data/pipeline.ts";
-import { createMap, showIsland } from "./map.ts";
+import { createMap, setTerrain, showIsland } from "./map.ts";
 import { pickChoices } from "./quiz/choices.ts";
 import { pickQuestions } from "./quiz/game.ts";
 import { questionBounds } from "./quiz/zoom.ts";
@@ -65,6 +65,13 @@ async function main() {
   } catch (e) {
     panel.innerHTML = `<p class="feedback feedback--wrong" role="alert">× データを読み込めませんでした（${esc(String(e))}）</p>`;
     return;
+  }
+
+  const terrain = $<HTMLInputElement>("#mode-terrain");
+  const applyMode = () => setTerrain(map, terrain.checked);
+  applyMode();
+  for (const r of document.querySelectorAll('[name="mode"]')) {
+    r.addEventListener("change", applyMode);
   }
 
   function start() {
@@ -131,7 +138,12 @@ async function main() {
 
       /** 回答後に選択肢を押すと、その島へ移動して詳しく見られる（誤答も学びに使う） */
       const review = (c: Island) => {
-        showIsland(map, c, questionBounds(c.bbox, () => 0.5), !reduceMotion.matches);
+        showIsland(
+          map,
+          c,
+          questionBounds(c.bbox, () => 0.5),
+          !reduceMotion.matches,
+        );
         buttons.forEach((b, i) => {
           b.setAttribute("aria-pressed", String(choices[i] === c));
         });
@@ -147,10 +159,14 @@ async function main() {
         buttons.forEach((b, i) => {
           const c = choices[i];
           b.setAttribute("aria-pressed", String(c === island));
-          const mark = c === island ? "○ 正解" : c === choice ? "× あなたの答え" : "";
+          const mark =
+            c === island ? "○ 正解" : c === choice ? "× あなたの答え" : "";
           if (!mark) return;
           b.dataset.result = c === island ? "correct" : "wrong";
-          b.insertAdjacentHTML("beforeend", `<span class="mark">${mark}</span>`);
+          b.insertAdjacentHTML(
+            "beforeend",
+            `<span class="mark">${mark}</span>`,
+          );
         });
         const head = correct ? "○ 正解！" : `× 不正解… 正解は ${island.name}`;
         const last = q + 1 >= questions.length;
@@ -217,7 +233,12 @@ async function main() {
 // 数字キー 1〜4 で、パネル内の対応するボタンを押す
 document.addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key)) return;
-  if ((e.target as HTMLElement).closest("input, textarea, select")) return;
+  if (
+    (e.target as HTMLElement).closest(
+      'input:not([type="radio"]), textarea, select',
+    )
+  )
+    return;
   const button = panel.querySelector<HTMLButtonElement>(
     `[data-key="${e.key}"]`,
   );

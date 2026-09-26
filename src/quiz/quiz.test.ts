@@ -106,7 +106,11 @@ describe("pickChoices", () => {
     const pool2 = [hard, island({ name: "岩", band: 3 }), ...pool];
     const easy = island({ name: "易島", band: 0, center: [139.4, 34.7] });
     for (let seed = 1; seed < 20; seed++) {
-      expect(pickChoices(easy, [easy, ...pool2], rng(seed)).every((c) => c.band === 0)).toBe(true);
+      expect(
+        pickChoices(easy, [easy, ...pool2], rng(seed)).every(
+          (c) => c.band === 0,
+        ),
+      ).toBe(true);
     }
   });
 });

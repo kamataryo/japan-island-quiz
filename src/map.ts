@@ -11,11 +11,37 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 import type { Island } from "../scripts/data/pipeline.ts";
+import { gsiToTerrarium } from "./dem.ts";
 
 // MapLibre v6 は Worker を本体と同じ場所から import.meta.url 基準で読むが、
 // Vite の事前バンドルで場所がずれて 404 になり、エラーなしで止まる。依存ごとバンドルした Worker を明示する
 setWorkerUrl(workerUrl);
 addProtocol("pmtiles", new Protocol().tile);
+
+/** 地理院の標高タイル（DEM10B、z1〜14）を terrarium 形式の PNG にして返す */
+addProtocol("gsidem", async ({ url }, { signal }) => {
+  const res = await fetch(
+    `https://cyberjapandata.gsi.go.jp/xyz/dem_png/${url.slice(9)}.png`,
+    { signal },
+  );
+  // 陸から離れた海はタイルがなく 404 になる。0m の平らなタイルとして扱う
+  if (!res.ok && res.status !== 404) throw new Error(`HTTP ${res.status}`);
+  const canvas = new OffscreenCanvas(256, 256);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  if (!ctx) throw new Error("OffscreenCanvas が使えません");
+  if (res.ok) {
+    const bitmap = await createImageBitmap(await res.blob(), {
+      premultiplyAlpha: "none",
+      colorSpaceConversion: "none",
+    });
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+  }
+  const image = ctx.getImageData(0, 0, 256, 256);
+  gsiToTerrarium(image.data);
+  ctx.putImageData(image, 0, 0);
+  return { data: await (await canvas.convertToBlob()).arrayBuffer() };
+});
 
 /** マーカー（赤い円）の半径 px。島の外接円がこれより小さく写るときだけ表示する */
 const MARKER_RADIUS = 16;
@@ -28,6 +54,9 @@ const token = (name: string) =>
     .trim();
 
 const NONE: FilterSpecification = ["==", ["get", "id"], ""];
+
+/** 「等高線あり」のときだけ出すレイヤー */
+const TERRAIN_LAYERS = ["hillshade", "contour"];
 
 /** 地名ラベルを一切含まない自前のスタイル */
 function style(): StyleSpecification {
@@ -44,6 +73,24 @@ function style(): StyleSpecification {
         url: `pmtiles://${url}`,
         attribution:
           '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>',
+      },
+      // 出典は表示中のレイヤーのソースだけ出るので、「等高線あり」のときだけ表示される
+      dem: {
+        type: "raster-dem",
+        tiles: ["gsidem://{z}/{x}/{y}"],
+        tileSize: 256,
+        minzoom: 1,
+        maxzoom: 14,
+        encoding: "terrarium",
+        attribution:
+          '<a href="https://maps.gsi.go.jp/development/ichiran.html">地理院タイル（標高タイル）を加工して作成</a>',
+      },
+      // 国土地理院最適化ベクトルタイル（試験公開）。等高線の Cntr レイヤーだけ使う（z9〜）
+      gsi: {
+        type: "vector",
+        url: "pmtiles://https://cyberjapandata.gsi.go.jp/xyz/optimal_bvmap-v1/optimal_bvmap-v1.pmtiles",
+        attribution:
+          '<a href="https://github.com/gsi-cyberjapan/optimal_bvmap">国土地理院最適化ベクトルタイル</a>',
       },
       marker: {
         type: "geojson",
@@ -79,6 +126,38 @@ function style(): StyleSpecification {
         paint: { "fill-color": token("land") },
       },
       {
+        id: "target-fill",
+        type: "fill",
+        source: "base",
+        "source-layer": "islands",
+        filter: NONE,
+        paint: { "fill-color": token("highlight-fill") },
+      },
+      // 陰影と等高線は黄色い塗りの上に重ね、出題中の島でも地形が見えるようにする。
+      // 赤い太線は最前面に置くので埋もれない
+      {
+        id: "hillshade",
+        type: "hillshade",
+        source: "dem",
+        paint: {
+          "hillshade-shadow-color": token("hill-shadow"),
+          "hillshade-highlight-color": token("hill-highlight"),
+          "hillshade-accent-color": token("hill-shadow"),
+        },
+      },
+      {
+        id: "contour",
+        type: "line",
+        source: "gsi",
+        "source-layer": "Cntr",
+        paint: {
+          "line-color": token("contour"),
+          // 7352 は計曲線（値が 50m ごとだけのもの）。太く描く
+          "line-width": ["match", ["get", "vt_code"], 7352, 1.2, 0.6],
+          "line-opacity": 0.8,
+        },
+      },
+      {
         id: "land-edge",
         type: "line",
         source: "base",
@@ -98,14 +177,6 @@ function style(): StyleSpecification {
         source: "base",
         "source-layer": "islands",
         paint: edge,
-      },
-      {
-        id: "target-fill",
-        type: "fill",
-        source: "base",
-        "source-layer": "islands",
-        filter: NONE,
-        paint: { "fill-color": token("highlight-fill") },
       },
       {
         id: "target-line",
@@ -150,7 +221,10 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
   map.getCanvas().tabIndex = -1;
   map.on("error", (e) => console.error(e.error));
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error("地図の読み込みがタイムアウトしました")), 20_000);
+    const timer = setTimeout(
+      () => reject(new Error("地図の読み込みがタイムアウトしました")),
+      20_000,
+    );
     map.once("load", () => {
       clearTimeout(timer);
       resolve(map);
@@ -160,6 +234,13 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
       reject(e.error);
     });
   });
+}
+
+/** 白地図（false）と等高線あり（true）を切り替える */
+export function setTerrain(map: MapLibreMap, on: boolean): void {
+  for (const id of TERRAIN_LAYERS) {
+    map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
+  }
 }
 
 let target: Island | undefined;
