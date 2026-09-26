@@ -44,13 +44,24 @@ map.addLayer({
     "circle-stroke-width": 1,
   },
 });
-map.on("click", "points", (e) => {
-  const p = e.features?.[0]?.properties;
-  if (!p) return;
-  new Popup()
-    .setLngLat(e.lngLat)
-    .setText(`${p.name}（${config.bands[p.band].name}・${p.area} km²）`)
-    .addTo(map);
+// 代表点か島のポリゴンを押すと、その島の属性を出す
+const byId = new Map(islands.map((x) => [x.id, x]));
+map.on("click", ["points", "target-fill"], (e) => {
+  const x = byId.get(e.features?.[0]?.properties.id);
+  if (!x) return;
+  const div = document.createElement("div");
+  div.style.whiteSpace = "pre-line";
+  div.textContent = [
+    `${x.name}${x.yomi ? `（${x.yomi}）` : ""}`,
+    `${x.pref ?? "都道府県不明"}・${config.bands[x.band].name}`,
+    `面積 ${x.areaKm2.toFixed(3)} km²`,
+    x.population != null && `人口 ${x.population}`,
+    `sitelinks ${x.sitelinks}・スコア ${x.score.toFixed(3)}`,
+    `ID ${x.id}${x.wikidata ? `・${x.wikidata}` : ""}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+  new Popup().setLngLat(e.lngLat).setDOMContent(div).addTo(map);
 });
 
 const select = $("mode") as HTMLSelectElement;
@@ -87,7 +98,7 @@ function show() {
     features: xs.map((x) => ({
       type: "Feature",
       geometry: { type: "Point", coordinates: x.center },
-      properties: { name: x.name, band: x.band, area: x.areaKm2.toFixed(3) },
+      properties: { id: x.id, band: x.band },
     })),
   });
   (map.getSource("region") as GeoJSONSource).setData(
