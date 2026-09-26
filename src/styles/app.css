@@ -20,10 +20,36 @@
   font-size: 1.125rem;
 }
 
+/* 地図の高さ。スマホ幅では低くして、選択肢4つまで1画面に収める */
+:root {
+  --map-h: max(55dvh, 14rem);
+}
+
+@media (max-width: 40rem) {
+  :root {
+    --map-h: max(40dvh, 14rem);
+  }
+}
+
 .app__map {
-  height: 55dvh;
-  min-height: 14rem;
+  height: var(--map-h);
   border-inline: 2px solid var(--c-btn-dark);
+}
+
+/*
+ * 縦に余裕がある画面では地図を上に固定し、答え合わせを読みながら地図の島を確かめられるようにする。
+ * フォーカスで下の要素へスクロールしたときに地図の裏に隠れないよう、scroll-padding で地図の分を空ける
+ */
+@media (min-height: 32rem) {
+  .app__map {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  html {
+    scroll-padding-top: calc(var(--map-h) + 0.5rem);
+  }
 }
 
 .app__panel {
@@ -90,6 +116,8 @@
 
 .result-table thead th {
   background: var(--c-btn-face);
+  /* 見出しは短くしてあるので、折り返さずに列幅を決めさせる */
+  white-space: nowrap;
 }
 
 .result-table tbody th {

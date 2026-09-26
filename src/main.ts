@@ -3,7 +3,7 @@ import "./styles/app.css";
 import config from "../config/difficulty.json";
 import regions from "../config/regions.json";
 import type { Island } from "../scripts/data/pipeline.ts";
-import { createMap, showIsland } from "./map.ts";
+import { collapseAttribution, createMap, showIsland } from "./map.ts";
 import { pickChoices } from "./quiz/choices.ts";
 import { islandsIn, pickQuestions } from "./quiz/game.ts";
 import { questionBounds } from "./quiz/zoom.ts";
@@ -175,6 +175,7 @@ async function main() {
   }
 
   function play(mode: Mode) {
+    collapseAttribution(map);
     const questions = pickQuestions(
       mode.questions,
       QUESTIONS,
@@ -217,7 +218,9 @@ async function main() {
           else answer(c);
         });
       }
-      buttons[0]?.focus();
+      // 前の問題でスクロールしていても、先頭（タイトルバーの進捗）から見せる
+      scrollTo(0, 0);
+      buttons[0]?.focus({ preventScroll: true });
       announce(`${status}。太い線で囲まれた島はどれ？`);
 
       /** 回答後に選択肢を押すと、その島へ移動して詳しく見られる（誤答も学びに使う） */
@@ -281,9 +284,9 @@ async function main() {
               <tr>
                 <th scope="col">問</th>
                 <th scope="col">結果</th>
-                <th scope="col">正解の島</th>
+                <th scope="col">正解</th>
                 <th scope="col">都道府県</th>
-                <th scope="col">あなたの答え</th>
+                <th scope="col">回答</th>
               </tr>
             </thead>
             <tbody>

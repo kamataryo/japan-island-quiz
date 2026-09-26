@@ -251,10 +251,12 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
   const map = new MapLibreMap({
     container,
     style: style(),
-    bounds: [128, 26, 146, 45],
+    // 開始画面の地図。瀬戸内海のあたり（幅 500px の画面で四国から中国地方が収まる程度）
+    center: [133.48, 34.15],
+    zoom: 7.05,
     minZoom: MIN_ZOOM,
     maxZoom: 16,
-    // 最初は開いて表示し、地図を操作すると i アイコンにたたまれる
+    // 出典は最初は開いて見せ、遊び始めたら i アイコンにたたむ（collapseAttribution）
     attributionControl: { compact: true },
     dragRotate: false,
     pitchWithRotate: false,
@@ -281,6 +283,17 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
       reject(e.error);
     });
   });
+}
+
+/**
+ * 出典を i アイコンにたたむ（押せばまた開く）。MapLibre はドラッグされるまでたたまないが、
+ * クイズでは地図をあまり触らず、狭い画面では地図の下部を覆ったままになるため、遊び始めたときに呼ぶ
+ */
+export function collapseAttribution(map: MapLibreMap): void {
+  map
+    .getContainer()
+    .querySelector(".maplibregl-ctrl-attrib")
+    ?.classList.remove("maplibregl-compact-show");
 }
 
 let target: Island | undefined;
