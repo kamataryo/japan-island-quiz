@@ -27,6 +27,19 @@ a {
   color: var(--c-link);
 }
 
+/* 見た目はリンク、中身は button（地図の移動など、ページ内の操作に使う） */
+.link-btn {
+  min-height: var(--tap);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--c-link);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 :focus-visible {
   outline: 3px solid var(--c-focus);
   outline-offset: 2px;

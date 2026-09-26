@@ -34,7 +34,7 @@ pnpm data
 | 抽出 | `osmium tags-filter` で place=island/islet・natural=water・admin_level=4 | `data/cache/features-*.geojsonseq` |
 | 陸地 | land polygons を日本周辺で切り抜き（ogr2ogr） | `data/cache/land.geojsonseq` |
 | 島の組み立て | way/relation の島はそのまま。node だけの島は、その node を含む陸地ポリゴンを形状にする | |
-| 知名度・人口 | Wikidata SPARQL（sitelinks 数、P1082） | `data/cache/wikidata.json` |
+| 知名度・人口・記事名 | Wikidata SPARQL（sitelinks 数、P1082、日本語版 Wikipedia の記事） | `data/cache/wikidata-v2.json` |
 | 難易度 | `config/difficulty.json` の重みと帯の比率 | |
 | 出力 | | `public/data/islands.json`, `public/data/meta.json`, `public/data/base.pmtiles`, `data/report.md`（目視確認用） |
 

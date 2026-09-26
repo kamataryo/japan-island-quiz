@@ -85,6 +85,8 @@ export type Island = {
   nameEn?: string;
   yomi?: string;
   wikidata?: string;
+  /** 日本語版 Wikipedia の記事名（記事があるときだけ） */
+  wikipedia?: string;
   pref?: string;
   population?: number;
   areaKm2: number;
@@ -500,6 +502,7 @@ async function main() {
     bbox: x.bbox.map((v) => round(v, 5)) as BBox,
     center: [round(x.center[0], 5), round(x.center[1], 5)],
     sitelinks: metrics[i].sitelinks,
+    wikipedia: x.wikidata ? wd[x.wikidata]?.jawiki : undefined,
     shapeUniqueness: round(x.shapeUniqueness, 3),
     similarNeighbors: neighbors[i],
     score: round(scores[i], 4),
@@ -569,7 +572,9 @@ async function main() {
 
 // ---- Wikidata ----
 
-type WdEntry = { sitelinks: number; population?: number };
+type WdEntry = { sitelinks: number; population?: number; jawiki?: string };
+
+const JAWIKI = "https://ja.wikipedia.org/";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -590,7 +595,8 @@ async function fetchWithRetry(
 }
 
 async function fetchWikidata(qids: string[]): Promise<Record<string, WdEntry>> {
-  const path = `${CACHE}/wikidata.json`;
+  // 取得項目を増やしたらファイル名を変えて取り直す（v2: jawiki を追加）
+  const path = `${CACHE}/wikidata-v2.json`;
   const cache: Record<string, WdEntry> = existsSync(path)
     ? JSON.parse(readFileSync(path, "utf8"))
     : {};
@@ -598,10 +604,11 @@ async function fetchWikidata(qids: string[]): Promise<Record<string, WdEntry>> {
   for (let i = 0; i < todo.length; i += 200) {
     const chunk = todo.slice(i, i + 200);
     console.log(`wikidata ${i + chunk.length}/${todo.length}`);
-    const query = `SELECT ?item ?links ?pop WHERE {
+    const query = `SELECT ?item ?links ?pop ?ja WHERE {
       VALUES ?item { ${chunk.map((q) => `wd:${q}`).join(" ")} }
       ?item wikibase:sitelinks ?links .
       OPTIONAL { ?item wdt:P1082 ?pop }
+      OPTIONAL { ?ja schema:about ?item; schema:isPartOf <${JAWIKI}> }
     }`;
     const res = await fetchWithRetry("https://query.wikidata.org/sparql", {
       method: "POST",
@@ -618,6 +625,7 @@ async function fetchWikidata(qids: string[]): Promise<Record<string, WdEntry>> {
           item: { value: string };
           links: { value: string };
           pop?: { value: string };
+          ja?: { value: string };
         }[];
       };
     };
@@ -628,6 +636,10 @@ async function fetchWikidata(qids: string[]): Promise<Record<string, WdEntry>> {
       e.sitelinks = Number(b.links.value);
       if (b.pop)
         e.population = Math.max(e.population ?? 0, Number(b.pop.value));
+      if (b.ja)
+        e.jawiki = decodeURIComponent(
+          b.ja.value.slice(`${JAWIKI}wiki/`.length),
+        );
     }
     writeFileSync(path, JSON.stringify(cache));
     await sleep(1000);

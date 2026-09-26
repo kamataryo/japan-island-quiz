@@ -2,7 +2,7 @@ import "./styles/base.css";
 import "./styles/app.css";
 import config from "../config/difficulty.json";
 import type { Island } from "../scripts/data/pipeline.ts";
-import { createMap, setTerrain, showIsland } from "./map.ts";
+import { createMap, showIsland } from "./map.ts";
 import { pickChoices } from "./quiz/choices.ts";
 import { pickQuestions } from "./quiz/game.ts";
 import { questionBounds } from "./quiz/zoom.ts";
@@ -49,6 +49,24 @@ function describe(x: Island): string {
     .join("・");
 }
 
+const newTab = `<span class="visually-hidden">（新しいタブで開く）</span>`;
+
+/** 地図に表示中の島の説明と、外部サイトへのリンク */
+function viewing(x: Island): string {
+  const [lng, lat] = x.center;
+  // 島名で検索すると別の場所に当たることがあるので、島の上の代表点で開く
+  const gmap = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  const wiki =
+    x.wikipedia &&
+    `https://ja.wikipedia.org/wiki/${encodeURIComponent(x.wikipedia)}`;
+  return `
+    <p>${esc(`地図に表示中: ${x.name}（${describe(x)}）`)}</p>
+    <p class="row links">
+      ${wiki ? `<a href="${esc(wiki)}" target="_blank" rel="noopener">Wikipedia「${esc(x.wikipedia ?? "")}」↗${newTab}</a>` : ""}
+      <a href="${esc(gmap)}" target="_blank" rel="noopener">Google マップ ↗${newTab}</a>
+    </p>`;
+}
+
 // ---- 画面 ----
 
 async function main() {
@@ -67,12 +85,14 @@ async function main() {
     return;
   }
 
-  const terrain = $<HTMLInputElement>("#mode-terrain");
-  const applyMode = () => setTerrain(map, terrain.checked);
-  applyMode();
-  for (const r of document.querySelectorAll('[name="mode"]')) {
-    r.addEventListener("change", applyMode);
-  }
+  /** 答え合わせで、指定した島へ地図を移す */
+  const jump = (x: Island) =>
+    showIsland(
+      map,
+      x,
+      questionBounds(x.bbox, () => 0.5),
+      !reduceMotion.matches,
+    );
 
   function start() {
     progress.textContent = "";
@@ -138,18 +158,12 @@ async function main() {
 
       /** 回答後に選択肢を押すと、その島へ移動して詳しく見られる（誤答も学びに使う） */
       const review = (c: Island) => {
-        showIsland(
-          map,
-          c,
-          questionBounds(c.bbox, () => 0.5),
-          !reduceMotion.matches,
-        );
+        jump(c);
         buttons.forEach((b, i) => {
           b.setAttribute("aria-pressed", String(choices[i] === c));
         });
-        const text = `地図に表示中: ${c.name}（${describe(c)}）`;
-        $("#viewing").textContent = text;
-        announce(text);
+        $("#viewing").innerHTML = viewing(c);
+        announce(`地図に表示中: ${c.name}（${describe(c)}）`);
       };
 
       const answer = (choice: Island) => {
@@ -172,7 +186,7 @@ async function main() {
         const last = q + 1 >= questions.length;
         $("#feedback").innerHTML = `
           <p class="feedback feedback--${correct ? "correct" : "wrong"}">${esc(head)}</p>
-          <p id="viewing">${esc(`地図に表示中: ${island.name}（${describe(island)}）`)}</p>
+          <div id="viewing">${viewing(island)}</div>
           <p class="caption">選択肢を押すと、その島を地図で確かめられます。</p>
           <p class="next"><button class="btn" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>`;
         const next = $("#next");
@@ -185,6 +199,10 @@ async function main() {
     const result = () => {
       const score = answers.filter((a) => a.choice === a.island).length;
       progress.textContent = `結果・${BANDS[band]}`;
+      // 島名を押すと、その島へ地図を移す
+      const shown: Island[] = [];
+      const show = (x: Island) =>
+        `<button class="link-btn" type="button" data-show="${shown.push(x) - 1}">${esc(x.name)}</button>`;
       panel.innerHTML = `
         <h2 tabindex="-1" id="result">${score} / ${answers.length} 問正解</h2>
         <div class="table-wrap">
@@ -205,19 +223,32 @@ async function main() {
                   return `<tr class="result--${ok ? "correct" : "wrong"}">
                     <td>${i + 1}</td>
                     <td class="result__mark">${ok ? "○ 正解" : "× 不正解"}</td>
-                    <th scope="row">${esc(a.island.name)}</th>
+                    <th scope="row">${show(a.island)}</th>
                     <td>${esc(a.island.pref ?? "")}</td>
-                    <td>${esc(a.choice.name)}</td>
+                    <td>${show(a.choice)}</td>
                   </tr>`;
                 })
                 .join("")}
             </tbody>
           </table>
         </div>
+        <p class="caption">島の名前を押すと、その島を地図で確かめられます。</p>
         <p class="row">
           <button class="btn" type="button" id="again">もう一度（${esc(BANDS[band])}）</button>
           <button class="btn" type="button" id="back">難易度を選ぶ</button>
         </p>`;
+      for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-show]")) {
+        b.addEventListener("click", () => {
+          const x = shown[Number(b.dataset.show)];
+          jump(x);
+          // スマホでは表を下へ読み進めると地図が画面の外に出ているので戻す
+          $("#map").scrollIntoView({
+            behavior: reduceMotion.matches ? "auto" : "smooth",
+            block: "nearest",
+          });
+          announce(`地図に表示中: ${x.name}（${describe(x)}）`);
+        });
+      }
       $("#again").addEventListener("click", () => play(band));
       $("#back").addEventListener("click", start);
       $("#result").focus();
@@ -233,12 +264,7 @@ async function main() {
 // 数字キー 1〜4 で、パネル内の対応するボタンを押す
 document.addEventListener("keydown", (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key)) return;
-  if (
-    (e.target as HTMLElement).closest(
-      'input:not([type="radio"]), textarea, select',
-    )
-  )
-    return;
+  if ((e.target as HTMLElement).closest("input, textarea, select")) return;
   const button = panel.querySelector<HTMLButtonElement>(
     `[data-key="${e.key}"]`,
   );

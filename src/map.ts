@@ -55,8 +55,6 @@ const token = (name: string) =>
 
 const NONE: FilterSpecification = ["==", ["get", "id"], ""];
 
-/** 「等高線あり」のときだけ出すレイヤー */
-const TERRAIN_LAYERS = ["hillshade", "contour"];
 
 /** 地名ラベルを一切含まない自前のスタイル */
 function style(): StyleSpecification {
@@ -74,7 +72,6 @@ function style(): StyleSpecification {
         attribution:
           '<a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>',
       },
-      // 出典は表示中のレイヤーのソースだけ出るので、「等高線あり」のときだけ表示される
       dem: {
         type: "raster-dem",
         tiles: ["gsidem://{z}/{x}/{y}"],
@@ -110,14 +107,9 @@ function style(): StyleSpecification {
         "source-layer": "land",
         paint: { "fill-color": token("land") },
       },
-      {
-        id: "water",
-        type: "fill",
-        source: "base",
-        "source-layer": "water",
-        paint: { "fill-color": token("sea") },
-      },
-      // 湖や川の中の島は land に含まれないので、出題対象の島も陸として塗る
+      // 湖や川の中の島は land に含まれないので、出題対象の島も陸として塗る。
+      // 島の中の池を塗りつぶさないよう、水域はこれとハイライトの塗りより上に重ねる
+      // （湖の中の島は、OSM では湖のポリゴンの穴になっているので隠れない）
       {
         id: "islands",
         type: "fill",
@@ -156,6 +148,15 @@ function style(): StyleSpecification {
           "line-width": ["match", ["get", "vt_code"], 7352, 1.2, 0.6],
           "line-opacity": 0.8,
         },
+      },
+      // 水域は陰影・等高線より上に置き、湖や池を地図帳のように平らな水色にする
+      // （地理院の等高線は OSM の水域と形がずれ、池の上を横切ることがあるため）
+      {
+        id: "water",
+        type: "fill",
+        source: "base",
+        "source-layer": "water",
+        paint: { "fill-color": token("sea") },
       },
       {
         id: "land-edge",
@@ -234,13 +235,6 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
       reject(e.error);
     });
   });
-}
-
-/** 白地図（false）と等高線あり（true）を切り替える */
-export function setTerrain(map: MapLibreMap, on: boolean): void {
-  for (const id of TERRAIN_LAYERS) {
-    map.setLayoutProperty(id, "visibility", on ? "visible" : "none");
-  }
 }
 
 let target: Island | undefined;

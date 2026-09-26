@@ -26,14 +26,6 @@
   border-inline: 2px solid var(--c-btn-dark);
 }
 
-.app__mode {
-  gap: 0.5rem;
-  justify-content: flex-end;
-  padding: 0.5rem;
-  border-inline: 2px solid var(--c-btn-dark);
-  background: var(--c-panel);
-}
-
 .app__panel {
   flex: 1;
 }
@@ -41,6 +33,13 @@
 .app__panel h2 {
   margin: 0 0 0.75rem;
   font-size: 1.25rem;
+}
+
+/* 外部リンク。タップしやすいよう高さを確保する */
+.links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
 }
 
 .next {
