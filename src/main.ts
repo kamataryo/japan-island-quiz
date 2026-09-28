@@ -21,6 +21,7 @@ const panel = $("#panel");
 const progress = $("#progress");
 const live = $("#live");
 const home = $<HTMLAnchorElement>("#home");
+const mapEl = $("#map");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 type Answer = { island: Island; choice: Island };
@@ -165,7 +166,7 @@ async function main() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     [islands, map] = await Promise.all([
       res.json() as Promise<Island[]>,
-      createMap($("#map")),
+      createMap(mapEl),
     ]);
     window.__map = map;
   } catch (e) {
@@ -188,6 +189,8 @@ async function main() {
   function start() {
     progress.textContent = "";
     home.hidden = true;
+    // 選択画面では地図を隠す（まだ何も出題していないため）。読み込みは表示中に済ませてある
+    mapEl.hidden = true;
     const buttons = (ms: Mode[]) =>
       ms
         .map((m) => {
@@ -213,6 +216,9 @@ async function main() {
 
   function play(mode: Mode) {
     home.hidden = false;
+    mapEl.hidden = false;
+    // 隠している間は大きさが 0 なので測り直す
+    map.resize();
     collapseAttribution(map);
     const questions = pickQuestions(
       mode.questions,
@@ -363,7 +369,7 @@ async function main() {
           const x = shown[Number(b.dataset.show)];
           jump(x);
           // スマホでは表を下へ読み進めると地図が画面の外に出ているので戻す
-          $("#map").scrollIntoView({
+          mapEl.scrollIntoView({
             behavior: reduceMotion.matches ? "auto" : "smooth",
             block: "nearest",
           });
