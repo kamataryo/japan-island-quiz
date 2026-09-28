@@ -302,8 +302,8 @@ async function main() {
         const head = correct ? "○ 正解！" : `× 不正解… 正解は ${island.name}`;
         const last = q + 1 >= questions.length;
         $("#feedback").innerHTML = `
-          <div id="viewing">${viewing(island)}</div>
-          <p class="next"><button class="btn retro" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>`;
+          <p class="next"><button class="btn retro" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>
+          <div id="viewing">${viewing(island)}</div>`;
         record(island, correct);
         const next = $("#next");
         next.addEventListener("click", () => (last ? result() : ask(q + 1)));

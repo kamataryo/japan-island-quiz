@@ -131,7 +131,8 @@ a {
 /* ---- 選択肢 ---- */
 .choices {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  /* スマホでも 2×2 にして、地図と選択肢を1画面に収める。縦1列はごく狭い画面（文字の拡大時など）だけ */
+  grid-template-columns: repeat(2, 1fr);
   gap: 0.5rem;
   margin: 0;
   padding: 0;
@@ -140,13 +141,30 @@ a {
 
 .choice {
   display: flex;
-  gap: 0.75rem;
   align-items: center;
   width: 100%;
   /* 「○ 正解」で折り返したボタンがあっても、同じ行のボタンと高さを揃える */
   height: 100%;
+  gap: 0.5rem;
+  padding-inline: 0.5rem;
   text-align: left;
-  font-size: 1.125rem;
+  font-size: 1rem;
+}
+
+@media (max-width: 17.5rem) {
+  .choices {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 52rem) {
+  .choices {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .choice {
+    font-size: 1.125rem;
+  }
 }
 
 .choice kbd {
