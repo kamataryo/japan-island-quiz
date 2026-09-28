@@ -211,7 +211,11 @@ async function main() {
     for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
       b.addEventListener("click", () => play(modes[Number(b.dataset.mode)]));
     }
-    panel.querySelector<HTMLButtonElement>("[data-mode]")?.focus();
+    // 結果画面などでスクロールしていても、先頭から見せる
+    scrollTo(0, 0);
+    panel
+      .querySelector<HTMLButtonElement>("[data-mode]")
+      ?.focus({ preventScroll: true });
   }
 
   function play(mode: Mode) {
@@ -389,7 +393,6 @@ async function main() {
   // 読み込み直さずに最初の画面へ戻す。途中までの回答は送信済みなので、確認はしない
   home.addEventListener("click", (e) => {
     e.preventDefault();
-    scrollTo(0, 0);
     start();
   });
   start();
