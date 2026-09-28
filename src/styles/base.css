@@ -6,6 +6,11 @@
   box-sizing: border-box;
 }
 
+/* 引っ張って再読み込みすると、ゲームの途中の回答が消えるので止める（iOS の跳ねる動きも止まる） */
+html {
+  overscroll-behavior-y: none;
+}
+
 body {
   margin: 0;
   background: var(--c-paper);
