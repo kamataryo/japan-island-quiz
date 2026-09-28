@@ -181,6 +181,22 @@
   background: var(--c-paper);
 }
 
+/* 狭い画面では「報告」が右端に寄ると画面からはみ出すので、島名の行の右端にそろえる */
+@media (max-width: 26rem) {
+  #viewing .island-name {
+    position: relative;
+  }
+
+  .report {
+    position: static;
+  }
+
+  #viewing .report p {
+    right: 0;
+    left: auto;
+  }
+}
+
 /* 新しいタブで開くアイコン。文字の大きさに合わせる */
 .external {
   flex: none;
@@ -219,6 +235,14 @@
   background: var(--c-btn-face);
   /* 見出しは短くしてあるので、折り返さずに列幅を決めさせる */
   white-space: nowrap;
+}
+
+/* 320px 幅でも表が横スクロールにならないよう、セルの左右の余白を詰める */
+@media (max-width: 26rem) {
+  .result-table th,
+  .result-table td {
+    padding-inline: 0.25rem;
+  }
 }
 
 .result-table tbody th {

@@ -259,6 +259,8 @@ a {
   position: absolute;
   width: 1px;
   height: 1px;
+  /* 置いた位置から 1px はみ出して縦スクロールが出ないよう、大きさを打ち消す */
+  margin: -1px;
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
