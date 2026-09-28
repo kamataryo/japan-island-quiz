@@ -57,6 +57,19 @@ pnpm data
 | 形のユニークさ（1 − 凸包充填率 × 凸包の円形度） | 特徴的 |
 | 周辺の密集度（半径内にある面積が近い島の数） | 少ない |
 
+## アイコン
+
+`public/favicon.png`（32px）と `public/apple-touch-icon.png`（180px）は `scripts/icon.html` を headless Chrome で撮って作ります（フォントは Google Fonts から読むのでネット接続が必要）。
+
+```sh
+C="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+"$C" --headless --hide-scrollbars --virtual-time-budget=10000 --window-size=180,180 \
+  --screenshot="$PWD/public/apple-touch-icon.png" "file://$PWD/scripts/icon.html#180"
+sips -z 32 32 public/apple-touch-icon.png --out public/favicon.png
+```
+
+フォントの読み込みが撮影に間に合わないと字のない水色だけの画像になるので、そのときはもう一度実行してください。
+
 ## デプロイ
 
 `main` への push（または Actions の手動実行）で Cloudflare Workers（workers.dev）にデプロイされます（`.github/workflows/deploy.yml`、設定は `wrangler.jsonc`）。

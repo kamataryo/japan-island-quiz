@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- favicon.png・apple-touch-icon.png の元。作り方は README の「アイコン」を参照。#180 のように末尾に一辺の px を付けて開く（README では 180 で撮って favicon は縮小で作る） -->
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&text=島&display=block" rel="stylesheet" />
+    <script>
+      // vmin だと headless Chrome の既定のビューポートで計算されて位置がずれるので、大きさは px で指定する
+      document.documentElement.style.setProperty("--s", `${location.hash.slice(1) || 180}px`);
+    </script>
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      .icon {
+        display: grid;
+        place-items: center;
+        width: var(--s);
+        height: var(--s);
+        background: #b9dff0; /* --c-sea */
+        color: #1c3f7a; /* --c-title */
+        font-family: "DotGothic16", sans-serif;
+        font-size: calc(var(--s) * 0.75); /* 周りに余白を残す（iOS は角を丸めるので） */
+        line-height: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="icon">島</div>
+  </body>
+</html>
