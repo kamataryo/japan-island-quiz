@@ -7,6 +7,7 @@ import {
   showIsland,
   showPanHint,
 } from "./map.ts";
+import { appendInstallHint } from "./install-hint.ts";
 import { pickChoices } from "./quiz/choices.ts";
 import { pickQuestions } from "./quiz/game.ts";
 import { buildModes, type Mode } from "./quiz/modes.ts";
@@ -369,6 +370,7 @@ async function main() {
       }
       $("#again").addEventListener("click", () => play(mode));
       $("#back").addEventListener("click", start);
+      appendInstallHint(panel);
       $("#result").focus();
       announce(`結果は ${answers.length} 問中 ${score} 問正解です`);
     };

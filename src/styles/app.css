@@ -345,3 +345,20 @@
 .app__panel {
   padding-bottom: 2.5rem;
 }
+
+/* 結果画面の「ホーム画面に追加」の案内 */
+.install-hint {
+  margin-top: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 2px solid var(--c-btn-dark);
+  background: var(--c-paper);
+  box-shadow: 4px 4px 0 rgba(46, 39, 28, 0.4);
+}
+
+.install-hint p {
+  margin: 0.25rem 0;
+}
+
+.install-hint__lead {
+  font-weight: bold;
+}

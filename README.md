@@ -59,13 +59,17 @@ pnpm data
 
 ## アイコン
 
-`public/favicon.png`（32px）と `public/apple-touch-icon.png`（180px）は `scripts/icon.html` を headless Chrome で撮って作ります（フォントは Google Fonts から読むのでネット接続が必要）。
+`public/favicon.png`（32px）、`public/apple-touch-icon.png`（180px）、`public/icon-192.png`・`public/icon-512.png`（manifest.webmanifest 用。Android でホーム画面に追加したときのアイコン）は `scripts/icon.html` を headless Chrome で撮って作ります（フォントは Google Fonts から読むのでネット接続が必要）。
 
 ```sh
 C="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 "$C" --headless --hide-scrollbars --virtual-time-budget=10000 --window-size=180,180 \
   --screenshot="$PWD/public/apple-touch-icon.png" "file://$PWD/scripts/icon.html#180"
 sips -z 32 32 public/apple-touch-icon.png --out public/favicon.png
+for s in 192 512; do
+  "$C" --headless --hide-scrollbars --virtual-time-budget=10000 --window-size=$s,$s \
+    --screenshot="$PWD/public/icon-$s.png" "file://$PWD/scripts/icon.html#$s"
+done
 ```
 
 フォントの読み込みが撮影に間に合わないと字のない水色だけの画像になるので、そのときはもう一度実行してください。
