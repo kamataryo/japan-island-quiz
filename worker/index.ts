@@ -2,7 +2,8 @@
  * 静的アセットの配信に加えて、次の2つを Worker で処理する（wrangler.jsonc の run_worker_first）。
  * - /tiles/{版}/{z}/{x}/{y}.mvt: R2 に置いた base.pmtiles から1枚ずつ返す（版は TILES_VERSION）
  * - /api/answers: 島ごとの正答率の集計（POST で回答を足し、GET ?ids= で1ゲーム分をまとめて読む）
- * - /api/plays: 1プレイごとの得点の記録（POST のみ。集計は wrangler d1 execute で SQL を直接書く）
+ * - /api/plays: 1プレイごとの得点の記録（POST のみ）
+ * - /api/stats: 確認ページ（debug.html）用の集計。回答数の多い島100件と、モードごとの得点の n・平均・標準偏差
  */
 import { PMTiles, type RangeResponse, type Source } from "pmtiles";
 import difficulty from "../config/difficulty.json";
@@ -160,6 +161,33 @@ async function play(req: Request, env: Env) {
   return new Response(null, { status: 204 });
 }
 
+async function stats(env: Env) {
+  const [islands, modes] = await env.DB.batch([
+    env.DB.prepare(
+      "SELECT id, answers, correct FROM island_stats ORDER BY answers DESC LIMIT 100",
+    ),
+    // SQLite には標準偏差の関数がないので、二乗の平均から出す
+    env.DB.prepare(
+      "SELECT mode, COUNT(*) AS n, AVG(score) AS avg, AVG(score * score) AS sq FROM plays GROUP BY mode ORDER BY n DESC",
+    ),
+  ]);
+  return Response.json(
+    {
+      islands: islands.results,
+      modes: (
+        modes.results as { mode: string; n: number; avg: number; sq: number }[]
+      ).map(({ mode, n, avg, sq }) => ({
+        mode,
+        n,
+        avg,
+        std: Math.sqrt(Math.max(0, sq - avg * avg)),
+      })),
+    },
+    // 確認用なので多少古くてよい。開くたびに D1 を読まないようにする
+    { headers: { "cache-control": "public, max-age=60" } },
+  );
+}
+
 export default {
   async fetch(req, env) {
     const { pathname } = new URL(req.url);
@@ -167,6 +195,7 @@ export default {
     if (m) return tile(env, m[1], +m[2], +m[3], +m[4]);
     if (pathname === "/api/answers") return answer(req, env);
     if (pathname === "/api/plays") return play(req, env);
+    if (pathname === "/api/stats") return stats(env);
     return env.ASSETS.fetch(req);
   },
 } satisfies ExportedHandler<Env>;

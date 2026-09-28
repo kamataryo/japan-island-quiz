@@ -205,3 +205,37 @@ function show() {
     })
     .join("")}</table>`;
 }
+
+// みんなの集計は開いたときに1回だけ読む（vite dev では API がないので出ない）
+$("db").addEventListener(
+  "toggle",
+  async () => {
+    type Stats = {
+      islands: { id: string; answers: number; correct: number }[];
+      modes: { mode: string; n: number; avg: number; std: number }[];
+    };
+    try {
+      const res = await fetch("api/stats");
+      if (!res.ok) throw new Error(`${res.status}`);
+      const { islands, modes } = (await res.json()) as Stats;
+      $("db-body").innerHTML = `
+        <p>モードごとの得点</p>
+        <table><tr><td>モード</td><td>n</td><td>平均</td><td>標準偏差</td></tr>${modes
+          .map(
+            (m) =>
+              `<tr><td>${m.mode}</td><td>${m.n}</td><td>${m.avg.toFixed(2)}</td><td>${m.std.toFixed(2)}</td></tr>`,
+          )
+          .join("")}</table>
+        <p>回答数の多い島（上位${islands.length}件）</p>
+        <table><tr><td></td><td>島</td><td>回答</td><td>正答率</td></tr>${islands
+          .map(
+            (x, i) =>
+              `<tr><td>${i + 1}</td><td>${origById.get(x.id)?.name ?? x.id}</td><td>${x.answers}</td><td>${Math.round((x.correct / x.answers) * 100)}%</td></tr>`,
+          )
+          .join("")}</table>`;
+    } catch (e) {
+      $("db-body").textContent = `読み込めませんでした（${e}）`;
+    }
+  },
+  { once: true },
+);
