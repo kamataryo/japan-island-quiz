@@ -316,6 +316,8 @@ async function main() {
     const result = () => {
       const score = answers.filter((a) => a.choice === a.island).length;
       progress.textContent = `結果・${mode.name}`;
+      // 「難易度を選ぶ」ボタンと役割が重なるので出さない
+      home.hidden = true;
       // 島名を押すと、その島へ地図を移す
       const shown: Island[] = [];
       const show = (x: Island) =>
