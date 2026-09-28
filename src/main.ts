@@ -216,7 +216,8 @@ async function main() {
       <ul class="choices">${buttons(bands)}</ul>
       <h2 class="mode-heading">地域で遊ぶ</h2>
       <ul class="choices">${buttons(areas)}</ul>
-      <p class="caption retro">数字キー 1〜${modes.length} でも選べます。</p>`;
+      <p class="caption retro">数字キー 1〜${modes.length} でも選べます。</p>
+      <p class="caption">島のデータ: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors${newTab}</a>（ODbL）・Wikidata</p>`;
     for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
       b.addEventListener("click", () => play(modes[Number(b.dataset.mode)]));
     }
