@@ -1,13 +1,13 @@
 import "./styles/base.css";
 import "./styles/app.css";
 import type { Island } from "../scripts/data/pipeline.ts";
+import { appendInstallHint } from "./install-hint.ts";
 import {
   collapseAttribution,
   createMap,
   showIsland,
   showPanHint,
 } from "./map.ts";
-import { appendInstallHint } from "./install-hint.ts";
 import { pickChoices } from "./quiz/choices.ts";
 import { pickQuestions } from "./quiz/game.ts";
 import { buildModes, type Mode } from "./quiz/modes.ts";
@@ -127,6 +127,15 @@ function record(x: Island, correct: boolean) {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ id: x.id, correct }),
+  }).catch(() => {});
+}
+
+/** 1プレイの得点を集計に送る。失敗しても無視する */
+function recordPlay(mode: string, score: number, questions: number) {
+  fetch("api/plays", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ mode, score, questions }),
   }).catch(() => {});
 }
 
@@ -336,6 +345,7 @@ async function main() {
     const result = () => {
       const score = answers.filter((a) => a.choice === a.island).length;
       progress.textContent = `結果・${mode.name}`;
+      recordPlay(mode.name, score, answers.length);
       // 「難易度を選ぶ」ボタンと役割が重なるので出さない
       home.hidden = true;
       // 島名を押すと、その島へ地図を移す

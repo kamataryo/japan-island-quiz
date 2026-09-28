@@ -2,12 +2,16 @@
  * 静的アセットの配信に加えて、次の2つを Worker で処理する（wrangler.jsonc の run_worker_first）。
  * - /tiles/{版}/{z}/{x}/{y}.mvt: R2 に置いた base.pmtiles から1枚ずつ返す（版は TILES_VERSION）
  * - /api/answers: 島ごとの正答率の集計（POST で回答を足し、GET ?ids= で1ゲーム分をまとめて読む）
+ * - /api/plays: 1プレイごとの得点の記録（POST のみ。集計は wrangler d1 execute で SQL を直接書く）
  */
 import { PMTiles, type RangeResponse, type Source } from "pmtiles";
+import difficulty from "../config/difficulty.json";
+import regions from "../config/regions.json";
 import islands from "../public/data/islands.json";
 import { TILES_VERSION } from "../src/tiles-version.ts";
 
 const IDS = new Set(islands.map((x) => x.id));
+const MODES = new Set([...difficulty.bands, ...regions].map((x) => x.name));
 
 /** 送られてきた回答を検証する。実在しない島は集計しない（ゴミ行を増やさないため） */
 export function parseAnswer(
@@ -18,6 +22,26 @@ export function parseAnswer(
   if (typeof id !== "string" || !IDS.has(id) || typeof correct !== "boolean")
     return;
   return { id, correct };
+}
+
+/** 送られてきた得点を検証する。1ゲームは最大10問 */
+export function parsePlay(
+  body: unknown,
+): { mode: string; score: number; questions: number } | undefined {
+  if (typeof body !== "object" || body === null) return;
+  const { mode, score, questions } = body as Record<string, unknown>;
+  if (
+    typeof mode !== "string" ||
+    !MODES.has(mode) ||
+    !Number.isInteger(questions) ||
+    !Number.isInteger(score) ||
+    (questions as number) < 1 ||
+    (questions as number) > 10 ||
+    (score as number) < 0 ||
+    (score as number) > (questions as number)
+  )
+    return;
+  return { mode, score: score as number, questions: questions as number };
 }
 
 /** GET の ?ids=a,b,c を検証する。1ゲーム分（10問）より多いもの・実在しない島を含むものは弾く */
@@ -120,12 +144,29 @@ async function answer(req: Request, env: Env) {
   return Response.json(row);
 }
 
+async function play(req: Request, env: Env) {
+  if (req.method !== "POST")
+    return new Response(null, { status: 405, headers: { allow: "POST" } });
+  const ip = req.headers.get("cf-connecting-ip") ?? "";
+  if (!(await env.LIMITER.limit({ key: ip })).success)
+    return new Response(null, { status: 429 });
+  const p = parsePlay(await req.json().catch(() => undefined));
+  if (!p) return new Response(null, { status: 400 });
+  await env.DB.prepare(
+    "INSERT INTO plays (mode, score, questions) VALUES (?, ?, ?)",
+  )
+    .bind(p.mode, p.score, p.questions)
+    .run();
+  return new Response(null, { status: 204 });
+}
+
 export default {
   async fetch(req, env) {
     const { pathname } = new URL(req.url);
     const m = pathname.match(TILE);
     if (m) return tile(env, m[1], +m[2], +m[3], +m[4]);
     if (pathname === "/api/answers") return answer(req, env);
+    if (pathname === "/api/plays") return play(req, env);
     return env.ASSETS.fetch(req);
   },
 } satisfies ExportedHandler<Env>;
