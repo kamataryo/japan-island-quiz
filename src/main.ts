@@ -159,20 +159,20 @@ function formatRate(s: Stats | undefined): string {
 
 async function main() {
   panel.innerHTML = `<p>読み込み中…</p>`;
+  const fail = (e: unknown) => {
+    panel.innerHTML = `<p class="feedback feedback--wrong" role="alert">× データを読み込めませんでした（${esc(String(e))}）</p>`;
+  };
   let islands: Island[];
-  let map: Awaited<ReturnType<typeof createMap>>;
   try {
     const res = await fetch(`${import.meta.env.BASE_URL}data/islands.json`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    [islands, map] = await Promise.all([
-      res.json() as Promise<Island[]>,
-      createMap(mapEl),
-    ]);
-    window.__map = map;
+    islands = await res.json();
   } catch (e) {
-    panel.innerHTML = `<p class="feedback feedback--wrong" role="alert">× データを読み込めませんでした（${esc(String(e))}）</p>`;
+    fail(e);
     return;
   }
+  // 地図は最初の出題で作る。選択画面の前に作ると、隠すまでの間に一瞬見えてチラつくため
+  let map: Awaited<ReturnType<typeof createMap>>;
 
   /** 答え合わせで、指定した島へ地図を移す */
   const jump = (x: Island) =>
@@ -189,7 +189,7 @@ async function main() {
   function start() {
     progress.textContent = "";
     home.hidden = true;
-    // 選択画面では地図を隠す（まだ何も出題していないため）。読み込みは表示中に済ませてある
+    // 選択画面では地図を隠す（まだ何も出題していないため）
     mapEl.hidden = true;
     const buttons = (ms: Mode[]) =>
       ms
@@ -218,9 +218,19 @@ async function main() {
       ?.focus({ preventScroll: true });
   }
 
-  function play(mode: Mode) {
-    home.hidden = false;
+  async function play(mode: Mode) {
     mapEl.hidden = false;
+    if (!map) {
+      panel.innerHTML = `<p>読み込み中…</p>`;
+      try {
+        map = await createMap(mapEl);
+        window.__map = map;
+      } catch (e) {
+        fail(e);
+        return;
+      }
+    }
+    home.hidden = false;
     // 隠している間は大きさが 0 なので測り直す
     map.resize();
     collapseAttribution(map);
