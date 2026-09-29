@@ -136,6 +136,8 @@
   margin-left: 0.5em;
   padding: 0 0.3em;
   border: 2px solid var(--c-wrong);
+  /* 判子らしく角を丸める */
+  border-radius: 0.3em;
   color: var(--c-wrong);
   font-size: 0.875em;
   line-height: 1.4;
