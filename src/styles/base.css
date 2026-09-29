@@ -200,6 +200,31 @@ a {
   white-space: nowrap;
 }
 
+/* トップページのボタンの2行目「みんな 64%」とゲージ */
+.choice .mode-rate {
+  display: block;
+  font-size: 0.75em;
+  white-space: nowrap;
+}
+
+/* 古い学習ソフトの「むずかしさ」表示のようなマス目。数字も並べるので読み上げない */
+.choice .gauge {
+  display: inline-flex;
+  gap: 2px;
+  vertical-align: -0.05em;
+}
+
+.choice .gauge i {
+  width: 0.7em;
+  height: 0.7em;
+  border: 1px solid var(--c-btn-dark);
+  background: var(--c-paper);
+}
+
+.choice .gauge i.on {
+  background: var(--c-btn-dark);
+}
+
 /* ---- 正誤の表示 ---- */
 .feedback {
   padding: 0.5rem 1rem;

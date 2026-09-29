@@ -3,6 +3,7 @@
  * - /tiles/{版}/{z}/{x}/{y}.mvt: R2 に置いた base.pmtiles から1枚ずつ返す（版は TILES_VERSION）
  * - /api/answers: 島ごとの正答率の集計（POST で回答を足し、GET ?ids= で1ゲーム分をまとめて読む）
  * - /api/plays: 1プレイごとの得点の記録（POST のみ）
+ * - /api/modes: トップページ用の、モードごとのプレイ数と正解数・出題数の合計
  * - /api/stats: 確認ページ（debug.html）用の集計。回答数の多い島100件と、モードごとの得点の n・平均・標準偏差
  */
 import { PMTiles, type RangeResponse, type Source } from "pmtiles";
@@ -161,6 +162,17 @@ async function play(req: Request, env: Env) {
   return new Response(null, { status: 204 });
 }
 
+/** トップページのボタンに出す「みんなの正答率」の元。正答率は正解数の合計 ÷ 出題数の合計 */
+async function modes(env: Env) {
+  const { results } = await env.DB.prepare(
+    "SELECT mode, COUNT(*) AS n, SUM(score) AS score, SUM(questions) AS questions FROM plays GROUP BY mode",
+  ).all();
+  // トップページを開くたびに D1 を読まないよう、ブラウザと Cloudflare に5分キャッシュさせる
+  return Response.json(results, {
+    headers: { "cache-control": "public, max-age=300" },
+  });
+}
+
 async function stats(env: Env) {
   const [islands, modes] = await env.DB.batch([
     env.DB.prepare(
@@ -195,6 +207,7 @@ export default {
     if (m) return tile(env, m[1], +m[2], +m[3], +m[4]);
     if (pathname === "/api/answers") return answer(req, env);
     if (pathname === "/api/plays") return play(req, env);
+    if (pathname === "/api/modes") return modes(env);
     if (pathname === "/api/stats") return stats(env);
     return env.ASSETS.fetch(req);
   },

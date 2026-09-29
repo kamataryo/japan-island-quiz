@@ -10,6 +10,12 @@ import {
 } from "./map.ts";
 import { pickChoices } from "./quiz/choices.ts";
 import { pickQuestions } from "./quiz/game.ts";
+import {
+  GAUGE_CELLS,
+  gaugeFilled,
+  type ModeStat,
+  modeRate,
+} from "./quiz/mode-stats.ts";
 import { buildModes, type Mode } from "./quiz/modes.ts";
 import { questionBounds } from "./quiz/zoom.ts";
 
@@ -157,6 +163,35 @@ async function fetchStats(xs: Island[]): Promise<Map<string, Stats>> {
   }
 }
 
+/**
+ * モードごとのみんなの得点を読む。レスポンスは5分キャッシュされるので、トップページに戻るたびに呼んでよい。
+ * 集計 API がない（vite dev など）・失敗したときは空
+ */
+async function fetchModeStats(): Promise<Map<string, ModeStat>> {
+  try {
+    const res = await fetch("api/modes");
+    if (!res.ok) return new Map();
+    const rows = (await res.json()) as ModeStat[];
+    return new Map(rows.map((r) => [r.mode, r]));
+  } catch {
+    return new Map();
+  }
+}
+
+/**
+ * ボタンの2行目「みんな 64%」と5マスのゲージ。
+ * 正答率が出せないときは何も書かない（「みんな ―」は「みんなー」と呼びかけているように見えるため）。行の高さは空白で取っておく
+ */
+function modeRateHtml(rate: number | undefined): string {
+  if (rate === undefined) return `<span aria-hidden="true">&nbsp;</span>`;
+  const k = gaugeFilled(rate);
+  const cells = Array.from(
+    { length: GAUGE_CELLS },
+    (_, i) => `<i${i < k ? ' class="on"' : ""}></i>`,
+  ).join("");
+  return `みんな<span class="visually-hidden">の正答率</span> ${Math.round(rate * 100)}% <span class="gauge" aria-hidden="true">${cells}</span>`;
+}
+
 /** 「みんなの正答率 72%・1,234回答」。回答がまだなければ空文字 */
 function formatRate(s: Stats | undefined): string {
   if (!s?.answers) return "";
@@ -207,7 +242,8 @@ async function main() {
           return `
           <li><button class="btn choice" type="button" data-key="${i + 1}" data-mode="${i}">
             <kbd>${i + 1}</kbd><span>${esc(m.name)}
-            <small class="mark">${m.questions.length.toLocaleString("ja-JP")}島</small></span>
+            <small class="mark">${m.questions.length.toLocaleString("ja-JP")}島</small>
+            <small class="mode-rate">${modeRateHtml(undefined)}</small></span>
           </button></li>`;
         })
         .join("");
@@ -221,6 +257,17 @@ async function main() {
     for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
       b.addEventListener("click", () => play(modes[Number(b.dataset.mode)]));
     }
+    // みんなの正答率は後から差し込む（読めなくても2行目が空のまま遊べる。行の高さは最初から取ってあるのでずれない）
+    const buttonsEl = panel.querySelectorAll<HTMLButtonElement>("[data-mode]");
+    fetchModeStats().then((stats) => {
+      for (const b of buttonsEl) {
+        // 読み込み中に別の画面へ移っていたら何もしない
+        if (!b.isConnected) return;
+        const m = modes[Number(b.dataset.mode)];
+        const el = b.querySelector(".mode-rate");
+        if (el) el.innerHTML = modeRateHtml(modeRate(stats.get(m.name)));
+      }
+    });
     // 結果画面などでスクロールしていても、先頭から見せる
     scrollTo(0, 0);
     panel
