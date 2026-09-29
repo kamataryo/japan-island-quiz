@@ -130,6 +130,22 @@
   font-size: 0.875rem;
 }
 
+/* みんなの正答率が低い島の問題文に付ける、赤枠の判子風の「難問！」（色だけに頼らず文字で示す） */
+.hard {
+  display: inline-block;
+  margin-left: 0.5em;
+  padding: 0 0.3em;
+  border: 2px solid var(--c-wrong);
+  color: var(--c-wrong);
+  font-size: 0.875em;
+  line-height: 1.4;
+  transform: rotate(-4deg);
+}
+
+.hard[hidden] {
+  display: none;
+}
+
 /* 問題文の下のみんなの正答率。回答がまだない・集計を取れないときは行ごと消す */
 #rate {
   margin: -0.5rem 0 0.75rem;

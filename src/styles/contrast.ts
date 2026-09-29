@@ -34,6 +34,7 @@ export const PAIRS: { fg: string; bg: string; min: number; use: string }[] = [
   { fg: "link", bg: "correct-bg", min: 4.5, use: "結果表の島名（正解の行）" },
   { fg: "link", bg: "wrong-bg", min: 4.5, use: "結果表の島名（不正解の行）" },
   { fg: "wrong", bg: "wrong-bg", min: 4.5, use: "×不正解 の文字" },
+  { fg: "wrong", bg: "panel", min: 4.5, use: "「難問！」の文字" },
   { fg: "btn-dark", bg: "paper", min: 3, use: "ボタンの枠線" },
   { fg: "btn-dark", bg: "panel", min: 3, use: "ボタンの枠線（パネル上）" },
   { fg: "focus", bg: "paper", min: 3, use: "フォーカス枠" },

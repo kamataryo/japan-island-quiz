@@ -10,6 +10,7 @@ import {
 } from "./map.ts";
 import { pickChoices } from "./quiz/choices.ts";
 import { pickQuestions } from "./quiz/game.ts";
+import { isHard } from "./quiz/hard.ts";
 import {
   GAUGE_CELLS,
   gaugeFilled,
@@ -300,6 +301,11 @@ async function main() {
     const answers: Answer[] = [];
     // 読むのは開始時点の値なので、ゲーム中に他の人が答えた分は反映されない
     const stats = fetchStats(questions);
+    // 読み終わっていれば、出題の読み上げに「難問」を入れられるよう手元に置く
+    let statsNow: Map<string, Stats> | undefined;
+    stats.then((m) => {
+      statsNow = m;
+    });
 
     const ask = (q: number) => {
       const island = questions[q];
@@ -315,7 +321,7 @@ async function main() {
       // 出題の移動より後に出す（移動で消えないように）
       if (q === 0) showPanHint(map);
       panel.innerHTML = `
-        <h2 class="prompt">太い線で囲まれた島はどれ？</h2>
+        <h2 class="prompt">太い線で囲まれた島はどれ？<span id="hard" class="hard retro" hidden>難問！</span></h2>
         <p id="rate" class="caption"></p>
         <ul class="choices">
           ${choices
@@ -342,11 +348,18 @@ async function main() {
       // 前の問題でスクロールしていても、先頭（タイトルバーの進捗）から見せる
       scrollTo(0, 0);
       buttons[0]?.focus({ preventScroll: true });
-      announce(`${status}。太い線で囲まれた島はどれ？`);
+      // 最初の問題では集計がまだ届いていないことがある。そのときは読み上げず、見出しの「難問！」だけで伝える
+      const hardNow = isHard(statsNow?.get(island.id));
+      announce(
+        `${status}。${hardNow ? "難問。" : ""}太い線で囲まれた島はどれ？`,
+      );
       // 次の問題へ進んだ後に返ってきても、古い要素に書くだけで害はない（読み上げはしない。問題文の邪魔になるため）
       const rate = $("#rate");
+      const hard = $("#hard");
       stats.then((m) => {
-        rate.textContent = formatRate(m.get(island.id));
+        const s = m.get(island.id);
+        rate.textContent = formatRate(s);
+        hard.hidden = !isHard(s);
       });
 
       /** 回答後に選択肢を押すと、その島へ移動して詳しく見られる（誤答も学びに使う） */
