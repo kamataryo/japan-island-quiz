@@ -10,7 +10,7 @@ describe("modeRate", () => {
 
   it("プレイ数が足りない・集計がないときは出さない", () => {
     expect(
-      modeRate({ mode: "ふつう", n: MIN_PLAYS - 1, score: 1, questions: 290 }),
+      modeRate({ mode: "ふつう", n: MIN_PLAYS - 1, score: 0, questions: 0 }),
     ).toBeUndefined();
     expect(modeRate(undefined)).toBeUndefined();
   });

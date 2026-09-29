@@ -6,8 +6,8 @@ export type ModeStat = {
   questions: number;
 };
 
-/** これより少ないプレイ数では正答率を出さない（数人の結果で大きくぶれるため） */
-export const MIN_PLAYS = 30;
+/** これより少ないプレイ数では正答率を出さない。問題文の下の島の正答率と同じく、1プレイでもあれば出す（数が少ないとぶれるが、何も出ないより興味を惹くため） */
+export const MIN_PLAYS = 1;
 
 /** みんなの正答率（0〜1）。プレイ数が足りない・集計がないときは undefined */
 export function modeRate(s: ModeStat | undefined): number | undefined {

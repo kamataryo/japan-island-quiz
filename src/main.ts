@@ -178,10 +178,12 @@ async function fetchModeStats(): Promise<Map<string, ModeStat>> {
   }
 }
 
-/** ボタンの2行目「みんな 64%」と5マスのゲージ。正答率が出せないときは「―」 */
+/**
+ * ボタンの2行目「みんな 64%」と5マスのゲージ。
+ * 正答率が出せないときは何も書かない（「みんな ―」は「みんなー」と呼びかけているように見えるため）。行の高さは空白で取っておく
+ */
 function modeRateHtml(rate: number | undefined): string {
-  if (rate === undefined)
-    return `みんな<span class="visually-hidden">の正答率</span> <span aria-hidden="true">―</span><span class="visually-hidden">は集計中</span>`;
+  if (rate === undefined) return `<span aria-hidden="true">&nbsp;</span>`;
   const k = gaugeFilled(rate);
   const cells = Array.from(
     { length: GAUGE_CELLS },
@@ -255,7 +257,7 @@ async function main() {
     for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
       b.addEventListener("click", () => play(modes[Number(b.dataset.mode)]));
     }
-    // みんなの正答率は後から差し込む（読めなくても「―」のまま遊べる。行の高さは最初から取ってあるのでずれない）
+    // みんなの正答率は後から差し込む（読めなくても2行目が空のまま遊べる。行の高さは最初から取ってあるのでずれない）
     const buttonsEl = panel.querySelectorAll<HTMLButtonElement>("[data-mode]");
     fetchModeStats().then((stats) => {
       for (const b of buttonsEl) {
