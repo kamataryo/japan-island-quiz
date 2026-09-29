@@ -74,6 +74,20 @@ done
 
 フォントの読み込みが撮影に間に合わないと字のない水色だけの画像になるので、そのときはもう一度実行してください。
 
+## 結果のシェア
+
+結果画面の「結果をシェア」で、得点と ○× と、同じ問題に挑戦できるリンク（`/s/{モード}/{得点}/?seed=…`）を共有します（Web Share API がなければクリップボードにコピー）。
+問題・選択肢・地図の位置はシード（URL の `seed`）から決まるので、リンクを開いた人は同じ問題に挑戦できます。ただし `islands.json` を作り直すと同じシードでも問題が変わります。
+
+- `s/{モード}/{得点}/index.html`: 得点ごとの OGP を持つページ。`pnpm build` で `scripts/share-pages.ts`（Vite プラグイン）が作り、開くとトップページの挑戦画面（`/?mode=&score=&seed=`）へ移る
+- `ogp/{モード}/{得点}.png`: 得点ごとの OGP 画像。`scripts/ogp.html` を headless Chrome で撮って作る（フォントは Google Fonts から読むのでネット接続が必要。リポジトリには入れず、デプロイのたびに作る）
+
+```sh
+pnpm ogp   # public/ogp/ に作る。インストール済みの Google Chrome を使う（別の Chrome は CHROME_PATH で指定）
+```
+
+どちらもモードの `id`（URL に使う）と出題数を `config/difficulty.json`・`config/regions.json` から読むので、モードを足したり出題数（`questions`、既定は10）を変えたりしても作り直すだけで対応します。`id` を変えるとシェア済みのリンクが切れます。
+
 ## デプロイ
 
 `main` への push（または Actions の手動実行）で Cloudflare Workers（workers.dev）にデプロイされます（`.github/workflows/deploy.yml`、設定は `wrangler.jsonc`）。
@@ -147,6 +161,7 @@ git push
 開発・データ生成に使うもの（配布物には含まれない）:
 
 - [Turf](https://turfjs.org/): MIT
+- [Playwright](https://playwright.dev/)（playwright-core。OGP 画像の撮影）: Apache-2.0
 - [Vite](https://vite.dev/)・[Vitest](https://vitest.dev/): MIT
 - [Biome](https://biomejs.dev/): MIT または Apache-2.0
 - [TypeScript](https://www.typescriptlang.org/): Apache-2.0

@@ -7,13 +7,13 @@
  * - /api/stats: 確認ページ（debug.html）用の集計。回答数の多い島100件と、モードごとの得点の n・平均・標準偏差
  */
 import { PMTiles, type RangeResponse, type Source } from "pmtiles";
-import difficulty from "../config/difficulty.json";
-import regions from "../config/regions.json";
 import islands from "../public/data/islands.json";
+import { MODE_DEFS } from "../src/quiz/mode-defs.ts";
 import { TILES_VERSION } from "../src/tiles-version.ts";
 
 const IDS = new Set(islands.map((x) => x.id));
-const MODES = new Set([...difficulty.bands, ...regions].map((x) => x.name));
+/** モード名 → 1ゲームの出題数 */
+const MODES = new Map(MODE_DEFS.map((m) => [m.name, m.count]));
 
 /** 送られてきた回答を検証する。実在しない島は集計しない（ゴミ行を増やさないため） */
 export function parseAnswer(
@@ -26,7 +26,7 @@ export function parseAnswer(
   return { id, correct };
 }
 
-/** 送られてきた得点を検証する。1ゲームは最大10問 */
+/** 送られてきた得点を検証する。出題数はモードごとの上限まで（島が足りないと少なくなることがある） */
 export function parsePlay(
   body: unknown,
 ): { mode: string; score: number; questions: number } | undefined {
@@ -38,7 +38,7 @@ export function parsePlay(
     !Number.isInteger(questions) ||
     !Number.isInteger(score) ||
     (questions as number) < 1 ||
-    (questions as number) > 10 ||
+    (questions as number) > (MODES.get(mode) as number) ||
     (score as number) < 0 ||
     (score as number) > (questions as number)
   )

@@ -234,6 +234,15 @@
   justify-content: flex-end;
 }
 
+/* シェアされた問題に挑戦したときの、相手との得点の比べ */
+.versus {
+  display: inline-block;
+  margin: 0;
+  padding: 0.25rem 0.75rem;
+  border: 2px solid var(--c-btn-dark);
+  background: var(--c-paper);
+}
+
 /* 結果の表。正誤は行の背景色に加えて「○ 正解」「× 不正解」の文字でも示す */
 .table-wrap {
   overflow-x: auto;

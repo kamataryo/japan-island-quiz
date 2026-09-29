@@ -39,6 +39,10 @@ describe("parsePlay", () => {
     expect(parsePlay({ mode: "瀬戸内", score: 0, questions: 10 })).toBeTruthy();
   });
 
+  it("島が足りないときのため、出題数はモードの上限より少なくてもよい", () => {
+    expect(parsePlay({ mode: "ふつう", score: 3, questions: 5 })).toBeTruthy();
+  });
+
   it("実在しないモード・範囲外・整数でない値は弾く", () => {
     expect(parsePlay({ mode: "x", score: 1, questions: 10 })).toBeUndefined();
     expect(

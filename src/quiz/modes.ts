@@ -2,10 +2,10 @@ import config from "../../config/difficulty.json";
 import regions from "../../config/regions.json";
 import type { Island } from "../../scripts/data/pipeline.ts";
 import { islandsIn } from "./game.ts";
+import { type ModeDef, modeDef } from "./mode-defs.ts";
 
-/** 遊び方（難易度帯か地域）。questions から出題し、choices から選択肢を作る */
-export type Mode = {
-  name: string;
+/** 遊び方（難易度帯か地域）。questions から count 問を出題し、choices から選択肢を作る */
+export type Mode = ModeDef & {
   questions: Island[];
   choices: Island[];
   weight?: (x: Island) => number;
@@ -23,7 +23,7 @@ export function buildModes(islands: Island[]): {
   // 選んだ帯を主に、それより易しい帯も mix の割合で混ぜる
   // （帯ごとの島数の差を打ち消すよう、割合を島数で割って1島あたりの重みにする）
   const bands: Mode[] = config.bands.map((b) => ({
-    name: b.name,
+    ...modeDef(b),
     questions: islands.filter((x) => (b.mix[x.band] ?? 0) > 0),
     choices: islands,
     weight: (x) => b.mix[x.band] / counts[x.band],
@@ -45,7 +45,7 @@ export function buildModes(islands: Island[]): {
       ((r.oniShare / (1 - r.oniShare)) * restW) / oniW || 1,
     );
     return {
-      name: r.name,
+      ...modeDef(r),
       questions: xs,
       choices: xs,
       weight: (x) => base(x) * (x.band === oni ? k : 1),

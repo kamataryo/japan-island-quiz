@@ -145,7 +145,13 @@ function recompute() {
   byId = new Map(islands.map((x) => [x.id, x]));
   const { bands, areas } = buildModes(islands);
   modes = [
-    { name: "（すべての島を表示）", questions: islands, choices: islands },
+    {
+      id: "all",
+      name: "（すべての島を表示）",
+      count: 0,
+      questions: islands,
+      choices: islands,
+    },
     ...bands,
     ...areas,
   ];

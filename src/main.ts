@@ -9,7 +9,7 @@ import {
   showPanHint,
 } from "./map.ts";
 import { pickChoices } from "./quiz/choices.ts";
-import { pickQuestions } from "./quiz/game.ts";
+import { newSeed, pickQuestions, seededRng } from "./quiz/game.ts";
 import { isHard } from "./quiz/hard.ts";
 import {
   GAUGE_CELLS,
@@ -18,9 +18,14 @@ import {
   modeRate,
 } from "./quiz/mode-stats.ts";
 import { buildModes, type Mode } from "./quiz/modes.ts";
+import {
+  type Challenge,
+  parseChallenge,
+  shareText,
+  shareUrl,
+  versus,
+} from "./quiz/share.ts";
 import { questionBounds } from "./quiz/zoom.ts";
-
-const QUESTIONS = 10;
 
 const $ = <T extends HTMLElement>(sel: string) =>
   document.querySelector(sel) as T;
@@ -32,6 +37,9 @@ const mapEl = $("#map");
 const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
 type Answer = { island: Island; choice: Island };
+
+/** OS の共有画面を出せるか。出せなければ結果をクリップボードにコピーする */
+const canShare = typeof navigator.share === "function";
 
 declare global {
   interface Window {
@@ -276,7 +284,37 @@ async function main() {
       ?.focus({ preventScroll: true });
   }
 
-  async function play(mode: Mode) {
+  /** シェアされたリンクから開いたときの挑戦画面 */
+  function challenge(c: Challenge, mode: Mode) {
+    progress.textContent = "";
+    home.hidden = true;
+    mapEl.hidden = true;
+    const who =
+      c.score === undefined
+        ? "同じ問題"
+        : `「${mode.name}」で ${c.score} / ${mode.count} 問正解した人からの挑戦です。同じ${mode.count}問`;
+    panel.innerHTML = `
+      <h2 tabindex="-1" id="challenge">挑戦状</h2>
+      <p>${esc(who)}に挑戦しますか？</p>
+      <p class="row">
+        <button class="btn retro" type="button" id="accept">挑戦する（${esc(mode.name)}）</button>
+        <button class="btn retro" type="button" id="decline">難易度を選ぶ</button>
+      </p>`;
+    // 読み込み直したときに挑戦画面へ戻らないよう、URL から外す
+    const clear = () => history.replaceState(null, "", location.pathname);
+    $("#accept").addEventListener("click", () => {
+      clear();
+      play(mode, c.seed, c.score);
+    });
+    $("#decline").addEventListener("click", () => {
+      clear();
+      start();
+    });
+    $("#challenge").focus();
+  }
+
+  /** seed が同じなら同じ問題・選択肢・地図の位置になる。rival は挑戦したときの相手の得点 */
+  async function play(mode: Mode, seed = newSeed(), rival?: number) {
     mapEl.hidden = false;
     if (!map) {
       panel.innerHTML = `<p>読み込み中…</p>`;
@@ -294,8 +332,8 @@ async function main() {
     collapseAttribution(map);
     const questions = pickQuestions(
       mode.questions,
-      QUESTIONS,
-      Math.random,
+      mode.count,
+      seededRng(seed),
       mode.weight,
     );
     const answers: Answer[] = [];
@@ -309,7 +347,8 @@ async function main() {
 
     const ask = (q: number) => {
       const island = questions[q];
-      const choices = pickChoices(island, mode.choices, Math.random);
+      const rng = seededRng(seed, q + 1);
+      const choices = pickChoices(island, mode.choices, rng);
       const status = `${q + 1} / ${questions.length} 問目`;
       const showProgress = () => {
         // スマホ幅でもタイトルと1行に収まるよう詰める。区切りを「・」にすると「伊豆・小笠原」と紛れるので空白にする
@@ -317,7 +356,7 @@ async function main() {
       };
       showProgress();
       // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
-      showIsland(map, island, questionBounds(island.bbox, Math.random), false);
+      showIsland(map, island, questionBounds(island.bbox, rng), false);
       // 出題の移動より後に出す（移動で消えないように）
       if (q === 0) showPanHint(map);
       panel.innerHTML = `
@@ -415,6 +454,11 @@ async function main() {
         `<button class="link-btn" type="button" data-show="${shown.push(x) - 1}">${esc(x.name)}</button>`;
       panel.innerHTML = `
         <h2 tabindex="-1" id="result">${score} / ${answers.length} 問正解</h2>
+        ${rival === undefined ? "" : `<p class="versus retro">挑戦相手 ${rival} 問・あなた ${score} 問　${versus(score, rival)}</p>`}
+        <p class="row">
+          <button class="btn retro" type="button" id="share">${canShare ? "結果をシェア" : "結果をコピー"}</button>
+          <span class="caption">同じ${answers.length}問に挑戦できるリンクが付きます。</span>
+        </p>
         <div class="table-wrap">
           <table class="result-table">
             <thead>
@@ -461,11 +505,32 @@ async function main() {
           announce(`地図に表示中: ${x.name}（${describe(x)}）`);
         });
       }
+      const text = shareText(
+        mode,
+        answers.map((a) => a.choice === a.island),
+      );
+      const url = shareUrl(location.href, mode, score, seed);
+      $("#share").addEventListener("click", async () => {
+        if (canShare) {
+          // 共有画面を閉じたとき（AbortError）も含めて、失敗は知らせない
+          await navigator.share({ text, url }).catch(() => {});
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(`${text}\n${url}`);
+          announce("結果とリンクをコピーしました");
+          $("#share").textContent = "コピーしました";
+        } catch {
+          announce("コピーできませんでした");
+        }
+      });
       $("#again").addEventListener("click", () => play(mode));
       $("#back").addEventListener("click", start);
       appendInstallHint(panel);
       $("#result").focus();
-      announce(`結果は ${answers.length} 問中 ${score} 問正解です`);
+      announce(
+        `結果は ${answers.length} 問中 ${score} 問正解です${rival === undefined ? "" : `。挑戦相手は ${rival} 問。${versus(score, rival)}`}`,
+      );
     };
 
     ask(0);
@@ -476,7 +541,10 @@ async function main() {
     e.preventDefault();
     start();
   });
-  start();
+  const c = parseChallenge(location.search);
+  const cm = c && modes.find((m) => m.id === c.mode.id);
+  if (c && cm) challenge(c, cm);
+  else start();
 }
 
 // 数字キー 1〜9 で、パネル内の対応するボタンを押す

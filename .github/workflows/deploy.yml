@@ -35,6 +35,8 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
       - run: pnpm test
+      # 結果のシェア用の OGP 画像（モード × 得点ごと）。ランナーに入っている Google Chrome で撮る
+      - run: pnpm ogp
       - run: pnpm build
       - run: pnpm wrangler r2 object put japan-island-quiz/base.pmtiles --file "$RUNNER_TEMP/base.pmtiles" --remote
       - run: pnpm wrangler d1 migrations apply japan-island-quiz --remote
