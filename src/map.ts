@@ -54,6 +54,8 @@ const MARKER_RADIUS = 16;
 const MIN_QUESTION_ZOOM = 7;
 /** 寄せるときは、凸包が画面の FILL_SHARE を占めるまで寄せる */
 const FILL_SHARE = 1 / 16;
+/** 寄せるときも、島の幅・高さが画面の 1/SPAN_DIV を超えない（細長い島が横に広がりすぎないように） */
+const SPAN_DIV = 3;
 /** 寄せるときも島全体が画面に収まるよう、四辺に残す余白 px */
 const FIT_PADDING = 16;
 /** これより引くと、データのある範囲（日本周辺）の端が見えてしまう */
@@ -429,7 +431,7 @@ function highlight(map: MapLibreMap, island: Island) {
 
 /**
  * 出題中・答え合わせの表示。島の代表点を中心に、マーカーがちょうど消える大きさまで寄せる（ズーム7より引かない。島全体が収まらないときは収まるまで引く）。
- * fill のとき（むずい・おにモード）は、凸包が画面の 1/16 を占めるまで寄せる（島全体が画面に収まる範囲・最大ズームまで。マーカーが消える大きさより引かない）。
+ * fill のとき（むずい・おにモード）は、凸包が画面の 1/16 を占めるまで寄せる（島の幅・高さが画面の 1/3 以内・最大ズームまで。マーカーが消える大きさより引かない）。
  * 島が画面の外に出たら、ここへ戻るボタンを出す
  */
 export function focusIsland(
@@ -447,9 +449,17 @@ export function focusIsland(
   if (fill) {
     // hullKm2 のない古い islands.json では面積で代える（凸包より小さいので少し寄りすぎる）
     const hull = island.hullKm2 ?? island.areaKm2;
+    const [west, s, e, n] = island.bbox;
+    const span = fitZoom(
+      island.bbox,
+      [(west + e) / 2, (s + n) / 2],
+      w / SPAN_DIV,
+      h / SPAN_DIV,
+      0,
+    );
     const fill = Math.min(
       fillZoom(hull, island.center[1], w * h, FILL_SHARE),
-      fit,
+      span,
     );
     zoom = Math.max(zoom, fill);
   }
