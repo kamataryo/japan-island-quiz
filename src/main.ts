@@ -222,7 +222,8 @@ async function main() {
   let map: Awaited<ReturnType<typeof createMap>>;
 
   /** 答え合わせで、指定した島へ地図を移す */
-  const jump = (x: Island) => focusIsland(map, x, !reduceMotion.matches);
+  const jump = (x: Island, mode: Mode) =>
+    focusIsland(map, x, !reduceMotion.matches, !!mode.fill);
 
   const { bands, areas } = buildModes(islands);
   const modes = [...bands, ...areas];
@@ -276,6 +277,9 @@ async function main() {
     mapEl.hidden = false;
     if (!map) {
       panel.innerHTML = `<p>読み込み中…</p>`;
+      // 作った直後は開始位置の地図が描かれ、最初の島へ移るときにチラつくので、島を描くまで隠す
+      // （hidden だと大きさが 0 になり、島へ寄せるズームを測れない）
+      mapEl.style.visibility = "hidden";
       try {
         map = await createMap(mapEl);
         window.__map = map;
@@ -283,6 +287,10 @@ async function main() {
         fail(e);
         return;
       }
+      // この後 ask(0) で島へ移ってから最初に描いたときに見せる
+      map.once("render", () => {
+        mapEl.style.visibility = "";
+      });
     }
     home.hidden = false;
     // 隠している間は大きさが 0 なので測り直す
@@ -313,7 +321,7 @@ async function main() {
       };
       showProgress();
       // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
-      focusIsland(map, island, false);
+      focusIsland(map, island, false, !!mode.fill);
       // 出題の移動より後に出す（移動で消えないように）
       if (q === 0) showPanHint(map);
       panel.innerHTML = `
@@ -360,7 +368,7 @@ async function main() {
 
       /** 回答後に選択肢を押すと、その島へ移動して詳しく見られる（誤答も学びに使う） */
       const review = (c: Island) => {
-        jump(c);
+        jump(c, mode);
         buttons.forEach((b, i) => {
           b.setAttribute("aria-pressed", String(choices[i] === c));
         });

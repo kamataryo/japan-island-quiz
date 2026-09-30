@@ -15,7 +15,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 import type { Island } from "../scripts/data/pipeline.ts";
 import { gsiToTerrarium } from "./dem.ts";
-import { fillZoom, questionZoom } from "./quiz/zoom.ts";
+import { fillZoom, fitZoom, questionZoom } from "./quiz/zoom.ts";
 import { TILES_VERSION } from "./tiles-version.ts";
 
 // MapLibre v6 は Worker を本体と同じ場所から import.meta.url 基準で読むが、
@@ -50,9 +50,10 @@ addProtocol("gsidem", async ({ url }, { signal }) => {
 
 /** マーカー（赤い円）の半径 px。島の外接円がこれより小さく写るときだけ表示する */
 const MARKER_RADIUS = 16;
-/** この帯（むずい・おに）以上の島は、凸包が画面の FILL_SHARE を占めるまで寄せる */
-const FILL_FROM_BAND = 2;
-const FILL_SHARE = 1 / 3;
+/** 寄せるときは、凸包が画面の FILL_SHARE を占めるまで寄せる */
+const FILL_SHARE = 1 / 16;
+/** 寄せるときも島全体が画面に収まるよう、四辺に残す余白 px */
+const FIT_PADDING = 16;
 /** これより引くと、データのある範囲（日本周辺）の端が見えてしまう */
 const MIN_ZOOM = 5;
 
@@ -425,20 +426,25 @@ function highlight(map: MapLibreMap, island: Island) {
 
 /**
  * 出題中・答え合わせの表示。島の代表点を中心に、マーカーがちょうど消える大きさまで寄せる。
- * むずい・おにの島は、凸包が画面の 1/3 を占めるまで寄せる（最大ズームまで。マーカーが消える大きさより引かない）。
+ * fill のとき（むずい・おにモード）は、凸包が画面の 1/16 を占めるまで寄せる（島全体が画面に収まる範囲・最大ズームまで。マーカーが消える大きさより引かない）。
  * 島が画面の外に出たら、ここへ戻るボタンを出す
  */
 export function focusIsland(
   map: MapLibreMap,
   island: Island,
   animate: boolean,
+  fill: boolean,
 ): void {
   let zoom = questionZoom(island.bbox, MARKER_RADIUS);
-  if (island.band >= FILL_FROM_BAND) {
+  if (fill) {
     const { clientWidth: w, clientHeight: h } = map.getContainer();
     // hullKm2 のない古い islands.json では面積で代える（凸包より小さいので少し寄りすぎる）
     const hull = island.hullKm2 ?? island.areaKm2;
-    zoom = Math.max(zoom, fillZoom(hull, island.center[1], w * h, FILL_SHARE));
+    const fill = Math.min(
+      fillZoom(hull, island.center[1], w * h, FILL_SHARE),
+      fitZoom(island.bbox, island.center, w, h, FIT_PADDING),
+    );
+    zoom = Math.max(zoom, fill);
   }
   home = { center: island.center, zoom: Math.min(zoom, map.getMaxZoom()) };
   highlight(map, island);

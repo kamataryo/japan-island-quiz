@@ -61,3 +61,21 @@ export function fillZoom(
   const mPerPxZ0 = (EQUATOR_M * Math.cos((lat * Math.PI) / 180)) / 512;
   return Math.log2(mPerPxZ0 * Math.sqrt((share * screenPx2) / (areaKm2 * 1e6)));
 }
+
+/** 中心 center の画面（w×h px、四辺に padding px の余白）に bbox 全体が収まる最大のズーム */
+export function fitZoom(
+  bbox: BBox,
+  center: [number, number],
+  w: number,
+  h: number,
+  padding: number,
+): number {
+  const [west, s, e, n] = bbox;
+  const cy = mercY(center[1]);
+  // 中心から bbox の遠い側の辺までの距離（世界の幅を 1 とする）
+  const dx = Math.max(center[0] - west, e - center[0]) / 360;
+  const dy = Math.max(cy - mercY(n), mercY(s) - cy);
+  return Math.log2(
+    Math.min((w / 2 - padding) / dx, (h / 2 - padding) / dy) / 512,
+  );
+}

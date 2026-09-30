@@ -8,7 +8,7 @@ import {
   stripSuffix,
 } from "./choices.ts";
 import { inPolygon, islandsIn, pickQuestions } from "./game.ts";
-import { fillZoom, questionBounds, questionZoom } from "./zoom.ts";
+import { fillZoom, fitZoom, questionBounds, questionZoom } from "./zoom.ts";
 
 /** 固定シードの乱数。小さいシードのままだと最初の値がどれも 0 に近くなるので、散らしてから使う */
 function rng(seed = 1) {
@@ -248,5 +248,13 @@ describe("fillZoom", () => {
     expect(fillZoom(4, 0, 600 * 400, 1 / 3)).toBeCloseTo(z - 1, 6);
     const mPerPx = 40_075_016.686 / (512 * 2 ** z);
     expect(1e6 / mPerPx ** 2 / (600 * 400)).toBeCloseTo(1 / 3, 6);
+  });
+});
+
+describe("fitZoom", () => {
+  it("中心から遠い側の辺が画面の端（余白を除く）にちょうど届く", () => {
+    // 赤道付近、中心の東に 0.02°・西に 0.01°。横 600px・余白 16px なので東端まで 284px
+    const z = fitZoom([-0.01, -0.001, 0.02, 0.001], [0, 0], 600, 400, 16);
+    expect((0.02 / 360) * 512 * 2 ** z).toBeCloseTo(284, 6);
   });
 });
