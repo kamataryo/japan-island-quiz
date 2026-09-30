@@ -50,6 +50,8 @@ addProtocol("gsidem", async ({ url }, { signal }) => {
 
 /** マーカー（赤い円）の半径 px。島の外接円がこれより小さく写るときだけ表示する */
 const MARKER_RADIUS = 16;
+/** 出題時はこれより引かない（縮尺が 50km 前後。引きすぎると島が小さくなりすぎる）。ただし島全体が収まらないときは収まるまで引く */
+const MIN_QUESTION_ZOOM = 7;
 /** 寄せるときは、凸包が画面の FILL_SHARE を占めるまで寄せる */
 const FILL_SHARE = 1 / 16;
 /** 寄せるときも島全体が画面に収まるよう、四辺に残す余白 px */
@@ -425,7 +427,7 @@ function highlight(map: MapLibreMap, island: Island) {
 }
 
 /**
- * 出題中・答え合わせの表示。島の代表点を中心に、マーカーがちょうど消える大きさまで寄せる。
+ * 出題中・答え合わせの表示。島の代表点を中心に、マーカーがちょうど消える大きさまで寄せる（ズーム7より引かない。島全体が収まらないときは収まるまで引く）。
  * fill のとき（むずい・おにモード）は、凸包が画面の 1/16 を占めるまで寄せる（島全体が画面に収まる範囲・最大ズームまで。マーカーが消える大きさより引かない）。
  * 島が画面の外に出たら、ここへ戻るボタンを出す
  */
@@ -435,14 +437,18 @@ export function focusIsland(
   animate: boolean,
   fill: boolean,
 ): void {
-  let zoom = questionZoom(island.bbox, MARKER_RADIUS);
+  const { clientWidth: w, clientHeight: h } = map.getContainer();
+  const fit = fitZoom(island.bbox, island.center, w, h, FIT_PADDING);
+  let zoom = Math.max(
+    questionZoom(island.bbox, MARKER_RADIUS),
+    Math.min(MIN_QUESTION_ZOOM, fit),
+  );
   if (fill) {
-    const { clientWidth: w, clientHeight: h } = map.getContainer();
     // hullKm2 のない古い islands.json では面積で代える（凸包より小さいので少し寄りすぎる）
     const hull = island.hullKm2 ?? island.areaKm2;
     const fill = Math.min(
       fillZoom(hull, island.center[1], w * h, FILL_SHARE),
-      fitZoom(island.bbox, island.center, w, h, FIT_PADDING),
+      fit,
     );
     zoom = Math.max(zoom, fill);
   }
