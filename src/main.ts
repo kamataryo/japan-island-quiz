@@ -386,7 +386,6 @@ async function main() {
             ` <small class="mark">${mark}</small>`,
           );
         });
-        const head = correct ? "○ 正解！" : `× 不正解… 正解は ${island.name}`;
         const last = q + 1 >= questions.length;
         $("#feedback").innerHTML = `
           <p class="next"><button class="btn retro" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>
@@ -395,7 +394,9 @@ async function main() {
         const next = $("#next");
         next.addEventListener("click", () => (last ? result() : ask(q + 1)));
         next.focus();
-        announce(`${head}。${island.name}、${describe(island)}`);
+        announce(
+          `${correct ? "○ 正解！" : "× 不正解… 正解は "}${island.name}、${describe(island)}`,
+        );
       };
     };
 
