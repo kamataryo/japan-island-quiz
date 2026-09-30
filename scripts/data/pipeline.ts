@@ -23,6 +23,7 @@ import {
   bbox,
   booleanIntersects,
   booleanPointInPolygon,
+  convex,
   featureCollection,
   intersect,
   pointOnFeature,
@@ -123,6 +124,8 @@ export type Island = {
   cities: string[];
   population?: number;
   areaKm2: number;
+  /** 凸包の面積（km²）。むずい・おにの出題で、画面に対する大きさを決めるのに使う */
+  hullKm2: number;
   bbox: BBox;
   /** 島の上にあることが保証された代表点 */
   center: [number, number];
@@ -532,6 +535,7 @@ async function main() {
       prefs: islandPrefs,
       cities: islandCities,
       areaKm2,
+      hullKm2: area(convex(c.f) ?? c.f) / 1e6,
       bbox: b,
       center: c.p,
       shapeUniqueness: shapeUniqueness(c.f),
@@ -606,6 +610,7 @@ async function main() {
     ...x,
     population: metrics[i].population,
     areaKm2: round(x.areaKm2, 4),
+    hullKm2: round(x.hullKm2, 4),
     bbox: x.bbox.map((v) => round(v, 5)) as BBox,
     center: [round(x.center[0], 5), round(x.center[1], 5)],
     sitelinks: metrics[i].sitelinks,

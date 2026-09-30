@@ -5,6 +5,8 @@ import { appendInstallHint } from "./install-hint.ts";
 import {
   collapseAttribution,
   createMap,
+  focusIsland,
+  hideRecenter,
   showIsland,
   showPanHint,
 } from "./map.ts";
@@ -220,13 +222,7 @@ async function main() {
   let map: Awaited<ReturnType<typeof createMap>>;
 
   /** 答え合わせで、指定した島へ地図を移す */
-  const jump = (x: Island) =>
-    showIsland(
-      map,
-      x,
-      questionBounds(x.bbox, () => 0.5),
-      !reduceMotion.matches,
-    );
+  const jump = (x: Island) => focusIsland(map, x, !reduceMotion.matches);
 
   const { bands, areas } = buildModes(islands);
   const modes = [...bands, ...areas];
@@ -317,7 +313,7 @@ async function main() {
       };
       showProgress();
       // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
-      showIsland(map, island, questionBounds(island.bbox, Math.random), false);
+      focusIsland(map, island, false);
       // 出題の移動より後に出す（移動で消えないように）
       if (q === 0) showPanHint(map);
       panel.innerHTML = `
@@ -407,6 +403,7 @@ async function main() {
       const score = answers.filter((a) => a.choice === a.island).length;
       progress.textContent = `結果・${mode.name}`;
       recordPlay(mode.name, score, answers.length);
+      hideRecenter(map);
       // 「難易度を選ぶ」ボタンと役割が重なるので出さない
       home.hidden = true;
       // 島名を押すと、その島へ地図を移す
@@ -452,7 +449,12 @@ async function main() {
       )) {
         b.addEventListener("click", () => {
           const x = shown[Number(b.dataset.show)];
-          jump(x);
+          showIsland(
+            map,
+            x,
+            questionBounds(x.bbox, () => 0.5),
+            !reduceMotion.matches,
+          );
           // スマホでは表を下へ読み進めると地図が画面の外に出ているので戻す
           mapEl.scrollIntoView({
             behavior: reduceMotion.matches ? "auto" : "smooth",

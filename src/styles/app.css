@@ -309,6 +309,8 @@
 }
 
 .maplibregl-ctrl-group button {
+  /* 連打がブラウザのダブルタップ拡大にならないように */
+  touch-action: manipulation;
   width: var(--tap);
   height: var(--tap);
   box-shadow:
@@ -331,6 +333,13 @@
   box-shadow: none;
   outline: 3px solid var(--c-focus);
   outline-offset: -3px;
+}
+
+/* 島の位置へ戻るボタン（島が画面の外に出たときだけ出る） */
+.maplibregl-ctrl-group button.recenter {
+  display: grid;
+  place-items: center;
+  color: var(--c-ink);
 }
 
 .maplibregl-ctrl button .maplibregl-ctrl-icon {
