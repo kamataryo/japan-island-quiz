@@ -50,6 +50,11 @@ a {
   outline-offset: 2px;
 }
 
+/* 読み上げの起点としてフォーカスを置く見出しは押せないので、枠を出さない */
+[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .row {
   display: flex;
   flex-wrap: wrap;
@@ -304,5 +309,13 @@ a {
   .btn:active,
   .btn[aria-pressed="true"] {
     transform: none;
+  }
+}
+
+/* タッチ端末では数字キーの案内と番号の枠を出さない */
+@media (hover: none) and (pointer: coarse) {
+  .choice kbd,
+  .keys-hint {
+    display: none;
   }
 }

@@ -10,7 +10,7 @@ import {
   showIsland,
   showPanHint,
 } from "./map.ts";
-import { pickChoices } from "./quiz/choices.ts";
+import { nameKey, pickChoices } from "./quiz/choices.ts";
 import { pickQuestions } from "./quiz/game.ts";
 import { isHard } from "./quiz/hard.ts";
 import {
@@ -250,7 +250,7 @@ async function main() {
       <ul class="choices">${buttons(bands)}</ul>
       <h2 class="mode-heading">地域で遊ぶ</h2>
       <ul class="choices">${buttons(areas)}</ul>
-      <p class="caption retro">数字キー 1〜${modes.length} でも選べます。</p>
+      <p class="caption retro keys-hint">数字キー 1〜${modes.length} でも選べます。</p>
       <p class="caption">島のデータ: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors${newTab}</a>（ODbL）・Wikidata</p>`;
     for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
       b.addEventListener("click", () => play(modes[Number(b.dataset.mode)]));
@@ -303,6 +303,8 @@ async function main() {
       mode.weight,
     );
     const answers: Answer[] = [];
+    // 前の問題が消去法の手がかりにならないよう、このゲームで出題・選択肢に使った名前は選択肢に出さない
+    const used = new Set(questions.map((x) => nameKey(x.name)));
     // 読むのは開始時点の値なので、ゲーム中に他の人が答えた分は反映されない
     const stats = fetchStats(questions);
     // 読み終わっていれば、出題の読み上げに「難問」を入れられるよう手元に置く
@@ -313,19 +315,24 @@ async function main() {
 
     const ask = (q: number) => {
       const island = questions[q];
-      const choices = pickChoices(island, mode.choices, Math.random);
+      const choices = pickChoices(
+        island,
+        mode.choices.filter((x) => !used.has(nameKey(x.name))),
+        Math.random,
+      );
+      for (const c of choices) used.add(nameKey(c.name));
       const status = `${q + 1} / ${questions.length} 問目`;
       const showProgress = () => {
         // スマホ幅でもタイトルと1行に収まるよう詰める。区切りを「・」にすると「伊豆・小笠原」と紛れるので空白にする
         progress.textContent = `${q + 1}/${questions.length}問 ${mode.name} 正解 ${answers.filter((a) => a.choice === a.island).length}`;
       };
       showProgress();
-      // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
-      focusIsland(map, island, false, !!mode.fill);
-      // 出題の移動より後に出す（移動で消えないように）
-      if (q === 0) showPanHint(map);
+      const last = q + 1 >= questions.length;
+      const feedback = () => `
+          <p class="next"><button class="btn retro" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>
+          <div id="viewing">${viewing(island)}</div>`;
       panel.innerHTML = `
-        <h2 class="prompt">太い線で囲まれた島はどれ？<span id="hard" class="hard retro" hidden>難問！</span></h2>
+        <h2 class="prompt" tabindex="-1">太い線で囲まれた島はどれ？<span id="hard" class="hard retro" hidden>難問！</span></h2>
         <p id="rate" class="caption"></p>
         <ul class="choices">
           ${choices
@@ -337,7 +344,13 @@ async function main() {
             )
             .join("")}
         </ul>
-        <div id="feedback"></div>`;
+        <div id="feedback" class="reserve" aria-hidden="true">${feedback()}</div>`;
+      // 地図はパネルの残りの高さに広がるので、パネルを描いてから大きさを測り直して寄せる
+      map.resize();
+      // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
+      focusIsland(map, island, false, !!mode.fill);
+      // 出題の移動より後に出す（移動で消えないように）
+      if (q === 0) showPanHint(map);
       const buttons = [
         ...panel.querySelectorAll<HTMLButtonElement>("[data-index]"),
       ];
@@ -351,7 +364,10 @@ async function main() {
       }
       // 前の問題でスクロールしていても、先頭（タイトルバーの進捗）から見せる
       scrollTo(0, 0);
-      buttons[0]?.focus({ preventScroll: true });
+      // 選択肢ではなく問題文に置く（Enter の押しすぎで選択肢1を選ばないように。Tab で選択肢へ進める）
+      panel
+        .querySelector<HTMLElement>(".prompt")
+        ?.focus({ preventScroll: true });
       // 最初の問題では集計がまだ届いていないことがある。そのときは読み上げず、見出しの「難問！」だけで伝える
       const hardNow = isHard(statsNow?.get(island.id));
       announce(
@@ -394,10 +410,10 @@ async function main() {
             ` <small class="mark">${mark}</small>`,
           );
         });
-        const last = q + 1 >= questions.length;
-        $("#feedback").innerHTML = `
-          <p class="next"><button class="btn retro" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>
-          <div id="viewing">${viewing(island)}</div>`;
+        const fb = $("#feedback");
+        fb.classList.remove("reserve");
+        fb.removeAttribute("aria-hidden");
+        fb.innerHTML = feedback();
         record(island, correct);
         const next = $("#next");
         next.addEventListener("click", () => (last ? result() : ask(q + 1)));
