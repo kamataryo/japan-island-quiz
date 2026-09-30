@@ -285,7 +285,8 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
   // 地図を動かせることに気づいてもらうため、＋−ボタンを常に出す
   map.addControl(new NavigationControl({ showCompass: false }));
   // zoomIn/zoomOut は「今のズーム ±1」へ動くので、アニメーション中に連打すると途中の値からの ±1 になり
-  // 押した回数ほど寄らない。動いている間は、前に押した行き先から ±1 する
+  // 押した回数ほど寄らない。動いている間は、前に押した行き先から動かす。
+  // 1段ずつだと場所が分かるまで何度も押すことになるので、1回で2段ずつ動かす
   let goal: number | undefined;
   map.on("moveend", () => {
     goal = undefined;
@@ -297,9 +298,9 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
     );
     return goal;
   };
-  map.zoomIn = (options, eventData) => map.zoomTo(step(1), options, eventData);
+  map.zoomIn = (options, eventData) => map.zoomTo(step(2), options, eventData);
   map.zoomOut = (options, eventData) =>
-    map.zoomTo(step(-1), options, eventData);
+    map.zoomTo(step(-2), options, eventData);
   map.addControl(recenter);
   map.addControl(new ScaleControl(), "bottom-left");
   map.getCanvas().tabIndex = -1;

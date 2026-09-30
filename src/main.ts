@@ -492,7 +492,9 @@ async function main() {
 
 // 数字キー 1〜9 で、パネル内の対応するボタンを押す
 document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key)) return;
+  // 押しっぱなしの連続入力は無視する（難易度を選んだキーがそのまま1問目の回答にならないように）
+  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key))
+    return;
   if ((e.target as HTMLElement).closest("input, textarea, select")) return;
   const button = panel.querySelector<HTMLButtonElement>(
     `[data-key="${e.key}"]`,
