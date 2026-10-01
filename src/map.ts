@@ -1,4 +1,5 @@
 import {
+  AttributionControl,
   addProtocol,
   type FilterSpecification,
   type GeoJSONSource,
@@ -270,8 +271,8 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
     zoom: 7.05,
     minZoom: MIN_ZOOM,
     maxZoom: 16,
-    // 出典は最初は開いて見せ、遊び始めたら i アイコンにたたむ（collapseAttribution）
-    attributionControl: { compact: true, customAttribution: ATTRIBUTION },
+    // 出典は左下に置くので、下で足す
+    attributionControl: false,
     dragRotate: false,
     pitchWithRotate: false,
     touchPitch: false,
@@ -284,8 +285,8 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
     },
   });
   map.touchZoomRotate.disableRotation();
-  // 地図を動かせることに気づいてもらうため、＋−ボタンを常に出す
-  map.addControl(new NavigationControl({ showCompass: false }));
+  // 地図を動かせることに気づいてもらうため、＋−ボタンを常に出す。スマホを片手で持っても親指が届く右下に置く
+  map.addControl(new NavigationControl({ showCompass: false }), "bottom-right");
   // zoomIn/zoomOut は「今のズーム ±1」へ動くので、アニメーション中に連打すると途中の値からの ±1 になり
   // 押した回数ほど寄らない。動いている間は、前に押した行き先から動かす。
   // 1段ずつだと場所が分かるまで何度も押すことになるので、1回で2段ずつ動かす
@@ -303,8 +304,14 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
   map.zoomIn = (options, eventData) => map.zoomTo(step(2), options, eventData);
   map.zoomOut = (options, eventData) =>
     map.zoomTo(step(-2), options, eventData);
-  map.addControl(recenter);
-  map.addControl(new ScaleControl(), "bottom-left");
+  // 下の隅では後から足したものが上に積まれるので、＋−の上に出る。出し入れしても＋−は動かない
+  map.addControl(recenter, "bottom-right");
+  // 出典は最初は開いて見せ、遊び始めたら i アイコンにたたむ（collapseAttribution）
+  map.addControl(
+    new AttributionControl({ compact: true, customAttribution: ATTRIBUTION }),
+    "bottom-left",
+  );
+  map.addControl(new ScaleControl(), "top-right");
   map.getCanvas().tabIndex = -1;
   map.on("error", (e) => console.error(e.error));
   return new Promise((resolve, reject) => {
@@ -384,7 +391,7 @@ function updateMarker(map: MapLibreMap) {
   );
 }
 
-/** 出題中の島の最初の表示。島が画面の外に出たら、＋−の下のボタンでここへ戻す */
+/** 出題中の島の最初の表示。島が画面の外に出たら、＋−の上のボタンでここへ戻す */
 let home: { center: [number, number]; zoom: number } | undefined;
 
 const recenter = new (class implements IControl {

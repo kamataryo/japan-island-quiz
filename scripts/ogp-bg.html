@@ -18,8 +18,8 @@
         height: 630px;
       }
       /* 背景には地図と出典だけを残す */
-      .maplibregl-ctrl-top-right,
-      .maplibregl-ctrl-bottom-left {
+      .maplibregl-ctrl-group,
+      .maplibregl-ctrl-scale {
         display: none;
       }
       .title {
@@ -53,6 +53,11 @@
         fetch("/data/islands.json").then((r) => r.json()),
         createMap(document.querySelector("#map")),
       ]);
+      // アプリでは出典は左下だが、左下にはタイトルを重ねるので右下へ移す
+      map
+        .getContainer()
+        .querySelector(".maplibregl-ctrl-bottom-right")
+        .append(map.getContainer().querySelector(".maplibregl-ctrl-attrib"));
       const island = islands.find((x) => x.id === id);
       const filter = ["==", ["get", "id"], id];
       for (const layer of ["target-fill", "target-casing", "target-line"]) map.setFilter(layer, filter);
