@@ -49,6 +49,12 @@ describe("pickQuestions", () => {
     const qs = pickQuestions(pool, 10, rng());
     expect(new Set(qs.map((q) => q.id)).size).toBe(10);
   });
+  it("同名の別の島は1つしか出さない（表記ゆれも同名とみなす）", () => {
+    const names = ["大島", "大島", "沖ノ島", "沖之島", "鳥島"];
+    const pool = names.map((name) => island({ name }));
+    for (let seed = 1; seed < 20; seed++)
+      expect(pickQuestions(pool, 5, rng(seed))).toHaveLength(3);
+  });
   it("重みの大きい島ほど選ばれやすい", () => {
     let big = 0;
     for (let seed = 1; seed < 50; seed++) {

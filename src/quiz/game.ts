@@ -1,10 +1,11 @@
 import type { Island } from "../../scripts/data/pipeline.ts";
+import { nameKey } from "./choices.ts";
 
 export type Rng = () => number;
 
 /**
  * シードから決まった列を返す乱数（mulberry32）。stream を変えると別の列になる。
- * 1ゲームの出題は stream 0、q 問目の選択肢と地図の位置は stream q+1 から作る
+ * 1ゲームの出題は stream 0、q 問目の選択肢は stream q+1 から作る
  * （問題ごとに列を分けておけば、乱数を呼ぶ回数が変わっても他の問題に響かない）
  */
 export function seededRng(seed: number, stream = 0): Rng {
@@ -40,7 +41,8 @@ export function shuffle<T>(xs: readonly T[], rng: Rng): T[] {
 }
 
 /**
- * 重複なしで n 問選ぶ。weight を渡すと重みに比例して出やすくする
+ * 重複なしで n 問選ぶ。同名の別の島（表記ゆれも nameKey でそろえる）も1つしか出さない。
+ * weight を渡すと重みに比例して出やすくする
  * （Efraimidis–Spirakis の方法: rng()^(1/w) の大きい順に取る）
  */
 export function pickQuestions(
@@ -49,11 +51,16 @@ export function pickQuestions(
   rng: Rng,
   weight: (x: Island) => number = () => 1,
 ): Island[] {
+  const seen = new Set<string>();
   return pool
     .map((x) => [rng() ** (1 / weight(x)), x] as const)
     .sort((a, b) => b[0] - a[0])
-    .slice(0, n)
-    .map(([, x]) => x);
+    .map(([, x]) => x)
+    .filter((x) => {
+      if (seen.size >= n || seen.has(nameKey(x.name))) return false;
+      seen.add(nameKey(x.name));
+      return true;
+    });
 }
 
 /** 点が多角形（[経度, 緯度] の輪）の内側にあるか（交差数判定） */
