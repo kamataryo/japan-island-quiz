@@ -1,0 +1,75 @@
+<!doctype html>
+<!--
+  地域モードの OGP 画像の背景（1200×630）の元。scripts/ogp-bg.ts が開発サーバーで ?id=（島の id）と、あれば &pad=（上下の余白 px。既定 160）を付けて開いて撮る。
+  public/ogp.png（利尻島）と同じく、アプリの地図で島をハイライトし、左下にタイトルを重ねる。
+  左上は scripts/ogp.html の結果の枠が載るので、島は右寄りに置く
+-->
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <link href="https://fonts.googleapis.com/css2?family=DotGothic16&display=block" rel="stylesheet" />
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+      }
+      #map {
+        width: 1200px;
+        height: 630px;
+      }
+      /* 背景には地図と出典だけを残す */
+      .maplibregl-ctrl-top-right,
+      .maplibregl-ctrl-bottom-left {
+        display: none;
+      }
+      .title {
+        position: absolute;
+        left: 48px;
+        top: 474px;
+        z-index: 1;
+        margin: 0;
+        padding: 8px 24px;
+        border: 3px solid var(--c-btn-dark);
+        background: linear-gradient(90deg, var(--c-title), var(--c-title-end));
+        box-shadow: 8px 8px 0 var(--c-btn-shadow);
+        color: var(--c-on-title);
+        font-family: var(--font-retro);
+        font-size: 62px;
+        line-height: 1.2;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <p class="title">日本の島クイズ</p>
+    <script type="module">
+      import "/src/styles/base.css";
+      import { createMap } from "/src/map.ts";
+
+      const params = new URLSearchParams(location.search);
+      const id = params.get("id");
+      const pad = Number(params.get("pad") ?? 160);
+      const [islands, map] = await Promise.all([
+        fetch("/data/islands.json").then((r) => r.json()),
+        createMap(document.querySelector("#map")),
+      ]);
+      const island = islands.find((x) => x.id === id);
+      const filter = ["==", ["get", "id"], id];
+      for (const layer of ["target-fill", "target-casing", "target-line"]) map.setFilter(layer, filter);
+      const [w, s, e, n] = island.bbox;
+      // 左の 490px は結果の枠、下はタイトルと出典を避ける
+      map.fitBounds(
+        [
+          [w, s],
+          [e, n],
+        ],
+        { padding: { top: pad, bottom: pad, left: 490, right: 290 }, duration: 0 },
+      );
+      // 地理院の陰影・等高線も読み終えてから撮らせる
+      map.once("idle", async () => {
+        await document.fonts.ready;
+        window.__ready = true;
+      });
+    </script>
+  </body>
+</html>

@@ -92,6 +92,13 @@ done
 pnpm ogp   # public/ogp/ に作る。インストール済みの Google Chrome を使う（別の Chrome は CHROME_PATH で指定）
 ```
 
+背景は `public/ogp.png`（利尻島）で、地域モードだけはその地域の島（瀬戸内＝小豆島、琉球弧＝西表島、伊豆・小笠原＝青ヶ島）の背景 `scripts/ogp-bg/{モード}.png` を使います。
+背景はリポジトリに入れてあり、島を変えるときだけ、開発サーバー（`pnpm dev`）を動かしたまま `scripts/ogp-bg.html` を撮って作り直します（島は `scripts/ogp-bg.ts` で指定）。
+
+```sh
+pnpm ogp:bg   # scripts/ogp-bg/ に作る。開発サーバーの URL が違うときは引数で渡す
+```
+
 どちらもモードの `id`（URL に使う）と出題数を `config/difficulty.json`・`config/regions.json` から読むので、モードを足したり出題数（`questions`、既定は10）を変えたりしても作り直すだけで対応します。`id` を変えるとシェア済みのリンクが切れます。
 
 ## デプロイ

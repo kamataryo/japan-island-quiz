@@ -14,6 +14,7 @@
     "format": "biome check --write .",
     "data": "node scripts/data/pipeline.ts",
     "ogp": "node scripts/ogp.ts",
+    "ogp:bg": "node scripts/ogp-bg.ts",
     "release-pmtiles": "node scripts/release-pmtiles.ts"
   },
   "devDependencies": {

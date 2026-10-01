@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- 結果のシェア用の OGP 画像（1200×630）の元。scripts/ogp.ts が ?mode=&score=&count= を付けて開き、モード × 得点ごとに撮る。背景は public/ogp.png -->
+<!-- 結果のシェア用の OGP 画像（1200×630）の元。scripts/ogp.ts が ?mode=&score=&count=（&bg=）を付けて開き、モード × 得点ごとに撮る。背景は bg（地域モードの scripts/ogp-bg/）か public/ogp.png -->
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
@@ -91,6 +91,7 @@
       const q = new URLSearchParams(location.search);
       const score = Number(q.get("score"));
       const count = Number(q.get("count"));
+      if (q.has("bg")) document.querySelector(".ogp").style.backgroundImage = `url("${q.get("bg")}")`;
       document.querySelector("#title").textContent = `結果：${q.get("mode")}`;
       document.querySelector("#score").textContent = score;
       document.querySelector("#count").textContent = count;

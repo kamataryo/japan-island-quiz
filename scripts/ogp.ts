@@ -7,6 +7,7 @@
  *
  * Chrome は既定でインストール済みの Google Chrome を使う。別のものを使うときは CHROME_PATH で実行ファイルを指定する
  */
+import { existsSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -34,10 +35,13 @@ try {
   for (const mode of MODE_DEFS) {
     for (let score = 0; score <= mode.count; score++) {
       const url = pathToFileURL(join(root, "scripts/ogp.html"));
+      // 地域モードは、その地域の島の背景（pnpm ogp:bg で作る）があれば使う
+      const bg = `ogp-bg/${mode.id}.png`;
       url.search = new URLSearchParams({
         mode: mode.name,
         score: String(score),
         count: String(mode.count),
+        ...(existsSync(join(root, "scripts", bg)) ? { bg } : {}),
       }).toString();
       await page.goto(url.toString(), { waitUntil: "networkidle" });
       // フォントが読めないまま撮ると、レトロな字にならない。

@@ -517,11 +517,11 @@ async function main() {
                   const won = ok && theirs?.[i] === false;
                   return `<tr class="result--${ok ? "correct" : "wrong"}">
                     <td>${i + 1}</td>
-                    <td class="result__mark">${ok ? "○ 正解" : "× 不正解"}</td>
+                    <td class="result__mark">${ok ? "○ 正解" : "× 不正解"}${won ? `<span class="hard won">勝ち</span>` : ""}</td>
                     <th scope="row">${show(a.island)}</th>
                     <td>${esc(a.island.prefs.join("・"))}</td>
                     <td>${show(a.choice)}</td>
-                    ${theirs ? `<td class="result__rival${!ok && theirs[i] ? " result--correct" : ""}">${theirs[i] ? "○" : "×"}${won ? `<span class="hard won">勝ち</span>` : ""}</td>` : ""}
+                    ${theirs ? `<td class="result__rival${ok !== theirs[i] ? ` result--${theirs[i] ? "correct" : "wrong"}` : ""}">${theirs[i] ? "○" : "×"}</td>` : ""}
                   </tr>`;
                 })
                 .join("")}
