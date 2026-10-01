@@ -17,6 +17,12 @@ pnpm build    # 型チェック + ビルド
 
 `pnpm-workspace.yaml` の `minimumReleaseAge` により、公開から30日経っていないパッケージはインストールされません。
 
+`pnpm dev` では、集計 API の Worker（`worker/index.ts`）も [`@cloudflare/vite-plugin`](https://developers.cloudflare.com/workers/vite-plugin/) で一緒に動きます。D1 などはローカルのものに置き換わり、`.wrangler/state/` に保存されます（消せば空に戻る）。初回だけ、D1 のテーブルを作ってください。
+
+```sh
+pnpm wrangler d1 migrations apply japan-island-quiz --local
+```
+
 ## データ生成
 
 島データは OpenStreetMap から作ります（ビルド時に1回だけ実行。クライアントから OSM の API は叩きません）。
@@ -163,6 +169,7 @@ git push
 - [Turf](https://turfjs.org/): MIT
 - [Playwright](https://playwright.dev/)（playwright-core。OGP 画像の撮影）: Apache-2.0
 - [Vite](https://vite.dev/)・[Vitest](https://vitest.dev/): MIT
+- [Wrangler](https://github.com/cloudflare/workers-sdk)・[@cloudflare/vite-plugin](https://github.com/cloudflare/workers-sdk): MIT または Apache-2.0
 - [Biome](https://biomejs.dev/): MIT または Apache-2.0
 - [TypeScript](https://www.typescriptlang.org/): Apache-2.0
 - CLI: [osmium-tool](https://osmcode.org/osmium-tool/)（GPL-3.0）、[GDAL](https://gdal.org/)（MIT）、[tippecanoe](https://github.com/felt/tippecanoe)（BSD-2-Clause）。実行するだけで、配布物には含まれない
