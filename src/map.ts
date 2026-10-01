@@ -344,9 +344,13 @@ export function collapseAttribution(map: MapLibreMap): void {
 
 const HINT_KEY = "panHintShown";
 
+/** 表示中の「地図は動かせます」の案内を消す（出していなければ何もしない） */
+let hidePanHint = () => {};
+
 /**
  * 初めて遊ぶ人に、地図を動かせることを地図の上に重ねて知らせる（1回だけ）。
- * 触れば地図をそのまま動かせるよう、クリックは下に通す。地図が次に動いたら消す
+ * 触れば地図をそのまま動かせるよう、クリックは下に通す。
+ * 手で地図を動かすか、次の島へ移したら消す（focusIsland・showIsland）
  */
 export function showPanHint(map: MapLibreMap): void {
   try {
@@ -362,7 +366,22 @@ export function showPanHint(map: MapLibreMap): void {
   hint.innerHTML =
     "<span>地図はドラッグで</span><span>動かせます</span><br><span>＋−・ピンチ・ホイールで</span><span>拡大縮小</span>";
   map.getContainer().append(hint);
-  map.once("movestart", () => hint.remove());
+  // movestart は地図の大きさが変わったとき（パネルを描いた直後の resize）にも届くので、
+  // 操作によるもの（originalEvent があるもの。＋−ボタン）だけで消す。
+  // ホイールでの拡大縮小の movestart には originalEvent が付かないので、操作のイベントでも消す
+  const onMove = (e: { originalEvent?: unknown }) => {
+    if (e.originalEvent) hidePanHint();
+  };
+  const onInput = () => hidePanHint();
+  const inputs = ["dragstart", "wheel", "touchmove"] as const;
+  map.on("movestart", onMove);
+  for (const type of inputs) map.on(type, onInput);
+  hidePanHint = () => {
+    hint.remove();
+    map.off("movestart", onMove);
+    for (const type of inputs) map.off(type, onInput);
+    hidePanHint = () => {};
+  };
 }
 
 let target: Island | undefined;
@@ -471,6 +490,7 @@ export function focusIsland(
     zoom = Math.max(zoom, fill);
   }
   home = { center: island.center, zoom: Math.min(zoom, map.getMaxZoom()) };
+  hidePanHint();
   highlight(map, island);
   map.easeTo({ ...home, duration: animate ? 800 : 0 });
   recenter.update(map);
@@ -484,6 +504,7 @@ export function showIsland(
   animate: boolean,
 ): void {
   home = undefined;
+  hidePanHint();
   recenter.update(map);
   highlight(map, island);
   map.fitBounds(bounds, { padding: 16, duration: animate ? 800 : 0 });

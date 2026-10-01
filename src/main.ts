@@ -405,7 +405,7 @@ async function main() {
       map.resize();
       // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
       focusIsland(map, island, false, !!mode.fill);
-      // 出題の移動より後に出す（移動で消えないように）
+      // 出題の移動より後に出す（focusIsland で消えないように）
       if (q === 0) showPanHint(map);
       const buttons = [
         ...panel.querySelectorAll<HTMLButtonElement>("[data-index]"),
