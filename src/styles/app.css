@@ -441,3 +441,26 @@
 .install-hint__lead {
   font-weight: bold;
 }
+
+/* 相手の ○×。行の色は自分の正誤なので、文字には色を付けない */
+.result__rival {
+  font-weight: 700;
+  text-align: center;
+}
+
+/* 挑戦状の相手の得点 */
+.rival-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1rem 0;
+  padding: 0.75rem 1rem;
+  border: 3px double var(--c-btn-dark);
+  background: var(--c-paper);
+}
+
+.rival-score__num {
+  font-size: 3.5rem;
+  line-height: 1.1;
+  font-weight: 400;
+}

@@ -82,31 +82,60 @@ const hard = modeById("hard");
 if (!hard) throw new Error("むずい がない");
 
 describe("shareText", () => {
-  it("モード・得点と ○× を5問ごとに区切って並べる。島名は入れない", () => {
+  it("モード・得点と ○× を5問ごとに区切って並べ、ハッシュタグを付ける。島名は入れない", () => {
     const r = [true, true, false, true, true, true, false, true, true, false];
     expect(shareText(hard, r)).toBe(
-      "日本の島クイズ【むずい】10問中7問正解\n○○×○○ ○×○○×",
+      "日本の島クイズ【むずい】10問中7問正解\n○○×○○ ○×○○×\n#日本の島クイズ",
     );
   });
 
   it("出題数が5の倍数でなくてもよい", () => {
     expect(shareText(hard, [true, false, true]).split("\n")[1]).toBe("○×○");
   });
+
+  it("挑戦の結果は勝敗の行を足す", () => {
+    const r = [true, true, false, true, true];
+    expect(shareText(hard, r, 3).split("\n")[1]).toBe(
+      "3問正解の挑戦に4問正解で勝利！",
+    );
+    expect(shareText(hard, r, 4).split("\n")[1]).toBe(
+      "4問正解の挑戦に4問正解で引き分け",
+    );
+    expect(shareText(hard, r, 5).split("\n")[1]).toBe(
+      "5問正解の挑戦に4問正解で敗北…",
+    );
+  });
 });
 
 describe("shareUrl と parseChallenge", () => {
-  it("シェアの URL はモード・得点ごとのページにシードを付ける", () => {
-    expect(shareUrl("https://example.com/?mode=x", hard, 7, 1295)).toBe(
-      "https://example.com/s/hard/7/?seed=zz",
+  const r = [true, true, false, true, true, true, false, true, true, false];
+
+  it("シェアの URL はモード・得点ごとのページにシードと ○× を付ける", () => {
+    expect(shareUrl("https://example.com/?mode=x", hard, r, 1295)).toBe(
+      "https://example.com/s/hard/7/?seed=zz&r=1101110110",
     );
   });
 
   it("シェアのページから移ったトップページの URL を読む", () => {
-    expect(parseChallenge("?mode=hard&score=7&seed=zz")).toEqual({
+    expect(parseChallenge("?mode=hard&score=7&seed=zz&r=1101110110")).toEqual({
       mode: hard,
       seed: 1295,
       score: 7,
+      results: r,
     });
+  });
+
+  it("○× は出題数・得点と合わなければ使わない", () => {
+    for (const x of [
+      "",
+      "110111011",
+      "11011101101",
+      "1111110110",
+      "11a1110110",
+    ])
+      expect(
+        parseChallenge(`?mode=hard&score=7&seed=zz&r=${x}`)?.results,
+      ).toBeUndefined();
   });
 
   it("得点が読めなくても、モードとシードがあれば挑戦できる", () => {

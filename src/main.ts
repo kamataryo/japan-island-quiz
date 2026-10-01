@@ -286,13 +286,16 @@ async function main() {
     progress.textContent = "";
     home.hidden = true;
     mapEl.hidden = true;
-    const who =
+    // 相手の得点を大きく出して、開いた瞬間に「挑まれた」と分かるようにする
+    const rival =
       c.score === undefined
-        ? "同じ問題"
-        : `「${mode.name}」で ${c.score} / ${mode.count} 問正解した人からの挑戦です。同じ${mode.count}問`;
+        ? ""
+        : `<p class="rival-score retro"><span class="rival-score__label">相手の得点</span><span><strong class="rival-score__num">${c.score}</strong> / ${mode.count} 問</span></p>`;
     panel.innerHTML = `
       <h2 tabindex="-1" id="challenge">挑戦状</h2>
-      <p>${esc(who)}に挑戦しますか？</p>
+      <p class="caption">「${esc(mode.name)}」の${mode.count}問</p>
+      ${rival}
+      <p>${c.score === undefined ? "同じ問題" : "この人と同じ問題"}に挑戦しますか？</p>
       <p class="row">
         <button class="btn retro" type="button" id="accept">挑戦する（${esc(mode.name)}）</button>
         <button class="btn retro" type="button" id="decline">難易度を選ぶ</button>
@@ -301,7 +304,13 @@ async function main() {
     const clear = () => history.replaceState(null, "", location.pathname);
     $("#accept").addEventListener("click", () => {
       clear();
-      play(mode, c.seed, c.score);
+      play(
+        mode,
+        c.seed,
+        c.score === undefined
+          ? undefined
+          : { score: c.score, results: c.results },
+      );
     });
     $("#decline").addEventListener("click", () => {
       clear();
@@ -310,8 +319,12 @@ async function main() {
     $("#challenge").focus();
   }
 
-  /** seed が同じなら同じ問題・選択肢になる。rival は挑戦したときの相手の得点 */
-  async function play(mode: Mode, seed = newSeed(), rival?: number) {
+  /** seed が同じなら同じ問題・選択肢になる。rival は挑戦したときの相手の得点と ○× */
+  async function play(
+    mode: Mode,
+    seed = newSeed(),
+    rival?: { score: number; results?: boolean[] },
+  ) {
     mapEl.hidden = false;
     if (!map) {
       panel.innerHTML = `<p>読み込み中…</p>`;
@@ -470,13 +483,16 @@ async function main() {
       hideRecenter(map);
       // 「難易度を選ぶ」ボタンと役割が重なるので出さない
       home.hidden = true;
+      // 相手の ○× があれば列を足して1問ずつ比べる（問題の数が違えば出さない）
+      const theirs =
+        rival?.results?.length === answers.length ? rival.results : undefined;
       // 島名を押すと、その島へ地図を移す
       const shown: Island[] = [];
       const show = (x: Island) =>
         `<button class="link-btn" type="button" data-show="${shown.push(x) - 1}">${esc(x.name)}</button>`;
       panel.innerHTML = `
         <h2 tabindex="-1" id="result">${score} / ${answers.length} 問正解</h2>
-        ${rival === undefined ? "" : `<p class="versus retro">挑戦相手 ${rival} 問・あなた ${score} 問　${versus(score, rival)}</p>`}
+        ${rival === undefined ? "" : `<p class="versus retro">挑戦相手 ${rival.score} 問・あなた ${score} 問　${versus(score, rival.score)}</p>`}
         <p class="row">
           <button class="btn retro" type="button" id="share">${canShare ? "結果をシェア" : "結果をコピー"}</button>
           <span class="caption">同じ${answers.length}問に挑戦できるリンクが付きます。</span>
@@ -490,6 +506,7 @@ async function main() {
                 <th scope="col">正解</th>
                 <th scope="col">都道府県</th>
                 <th scope="col">回答</th>
+                ${theirs ? `<th scope="col">相手</th>` : ""}
               </tr>
             </thead>
             <tbody>
@@ -502,6 +519,7 @@ async function main() {
                     <th scope="row">${show(a.island)}</th>
                     <td>${esc(a.island.prefs.join("・"))}</td>
                     <td>${show(a.choice)}</td>
+                    ${theirs ? `<td class="result__rival">${theirs[i] ? "○" : "×"}</td>` : ""}
                   </tr>`;
                 })
                 .join("")}
@@ -532,11 +550,9 @@ async function main() {
           announce(`地図に表示中: ${x.name}（${describe(x)}）`);
         });
       }
-      const text = shareText(
-        mode,
-        answers.map((a) => a.choice === a.island),
-      );
-      const url = shareUrl(location.href, mode, score, seed);
+      const results = answers.map((a) => a.choice === a.island);
+      const text = shareText(mode, results, rival?.score);
+      const url = shareUrl(location.href, mode, results, seed);
       $("#share").addEventListener("click", async () => {
         if (canShare) {
           // 共有画面を閉じたとき（AbortError）も含めて、失敗は知らせない
@@ -546,7 +562,12 @@ async function main() {
         try {
           await navigator.clipboard.writeText(`${text}\n${url}`);
           announce("結果とリンクをコピーしました");
-          $("#share").textContent = "コピーしました";
+          const b = $("#share");
+          b.textContent = "コピーしました";
+          // もう一度押せることが分かるよう、元に戻す
+          setTimeout(() => {
+            b.textContent = "結果をコピー";
+          }, 2000);
         } catch {
           announce("コピーできませんでした");
         }
@@ -556,7 +577,7 @@ async function main() {
       appendInstallHint(panel);
       $("#result").focus();
       announce(
-        `結果は ${answers.length} 問中 ${score} 問正解です${rival === undefined ? "" : `。挑戦相手は ${rival} 問。${versus(score, rival)}`}`,
+        `結果は ${answers.length} 問中 ${score} 問正解です${rival === undefined ? "" : `。挑戦相手は ${rival.score} 問。${versus(score, rival.score)}`}`,
       );
     };
 
