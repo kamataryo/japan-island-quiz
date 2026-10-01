@@ -513,13 +513,15 @@ async function main() {
               ${answers
                 .map((a, i) => {
                   const ok = a.choice === a.island;
+                  // 自分だけ正解した問題は、どこで差をつけたか分かるよう判子で示す
+                  const won = ok && theirs?.[i] === false;
                   return `<tr class="result--${ok ? "correct" : "wrong"}">
                     <td>${i + 1}</td>
                     <td class="result__mark">${ok ? "○ 正解" : "× 不正解"}</td>
                     <th scope="row">${show(a.island)}</th>
                     <td>${esc(a.island.prefs.join("・"))}</td>
                     <td>${show(a.choice)}</td>
-                    ${theirs ? `<td class="result__rival">${theirs[i] ? "○" : "×"}</td>` : ""}
+                    ${theirs ? `<td class="result__rival${!ok && theirs[i] ? " result--correct" : ""}">${theirs[i] ? "○" : "×"}${won ? `<span class="hard won">勝ち</span>` : ""}</td>` : ""}
                   </tr>`;
                 })
                 .join("")}

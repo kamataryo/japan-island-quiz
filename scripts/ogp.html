@@ -18,12 +18,12 @@
         font-family: var(--font-retro);
         color: var(--c-ink);
       }
-      /* 背景のタイトル（左下）と島（中央）に重ならない左上に、アプリと同じ古いウィンドウ風のパネルを置く */
+      /* 背景のタイトル（左下）と島（中央）に重ならない左上に（島の左端が x=480 前後なので、影も含めて 440px までに収める）、アプリと同じ古いウィンドウ風のパネルを置く */
       .window {
         position: absolute;
         top: 40px;
-        left: 48px;
-        width: 420px;
+        left: 24px;
+        width: 400px;
         border: 3px solid var(--c-btn-dark);
         background: var(--c-panel);
         box-shadow: 8px 8px 0 var(--c-btn-shadow);

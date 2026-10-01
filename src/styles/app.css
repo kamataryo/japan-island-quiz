@@ -442,10 +442,17 @@
   font-weight: bold;
 }
 
-/* 相手の ○×。行の色は自分の正誤なので、文字には色を付けない */
+/* 相手の ○×。行の色は自分の正誤なので、相手だけ正解のときはその欄だけ正解の色にする */
 .result__rival {
   font-weight: 700;
   text-align: center;
+  white-space: nowrap;
+}
+
+/* 自分だけ正解した問題の判子。「難問！」と同じ形で、色は正解の緑にする */
+.hard.won {
+  border-color: var(--c-correct);
+  color: var(--c-correct);
 }
 
 /* 挑戦状の相手の得点 */
