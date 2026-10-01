@@ -66,7 +66,10 @@ function announce(text: string) {
 function formatArea(km2: number): [string, string] {
   if (km2 >= 1)
     return [km2.toLocaleString("ja-JP", { maximumFractionDigits: 1 }), " km²"];
-  return [`約${Math.round(km2 * 1e6).toLocaleString("ja-JP")}`, " m²"];
+  // 計算で出した面積なので、1km² 未満は有効数字2桁にとどめる
+  const sig2 = { maximumSignificantDigits: 2 };
+  if (km2 >= 0.1) return [km2.toLocaleString("ja-JP", sig2), " km²"];
+  return [`約${(km2 * 1e6).toLocaleString("ja-JP", sig2)}`, " m²"];
 }
 
 /** 答え合わせで出す島の詳細（都道府県・市区町村・面積・人口）の [項目名, 値, 単位] */
