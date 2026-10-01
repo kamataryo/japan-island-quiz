@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- 結果のシェア用の OGP 画像（1200×630）の元。scripts/ogp.ts が ?mode=&score=&count=（&bg=）を付けて開き、モード × 得点ごとに撮る。背景は bg（地域モードの scripts/ogp-bg/）か public/ogp.png -->
+<!-- 結果のシェア用の OGP 画像（1200×630）の元。scripts/ogp.ts が ?mode=（「難易度：おに」など）&score=&count=（&bg=）を付けて開き、モード × 得点ごとに撮る。背景は bg（地域モードの scripts/ogp-bg/）か public/ogp.png -->
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
@@ -37,8 +37,14 @@
         line-height: 1.3;
       }
       .body {
-        padding: 8px 24px 20px;
+        padding: 12px 24px 20px;
         text-align: center;
+      }
+      /* モード名はタイトルバーに入れると成績のように読めるので、得点の上に「難易度：おに」と出す */
+      .mode {
+        margin: 0;
+        font-size: 34px;
+        line-height: 1.3;
       }
       /* 出題数が多いモードでも1行に収める（収まらなければ script で字を小さくする） */
       .score {
@@ -79,8 +85,9 @@
   <body>
     <div class="ogp">
       <div class="window">
-        <p class="title" id="title"></p>
+        <p class="title">結果</p>
         <div class="body">
+          <p class="mode" id="mode"></p>
           <p class="score"><strong id="score"></strong> / <span id="count"></span>問正解</p>
           <div class="gauge" id="gauge"></div>
           <p class="cta">同じ<span id="count2"></span>問に挑戦しよう！</p>
@@ -92,7 +99,7 @@
       const score = Number(q.get("score"));
       const count = Number(q.get("count"));
       if (q.has("bg")) document.querySelector(".ogp").style.backgroundImage = `url("${q.get("bg")}")`;
-      document.querySelector("#title").textContent = `結果：${q.get("mode")}`;
+      document.querySelector("#mode").textContent = q.get("mode");
       document.querySelector("#score").textContent = score;
       document.querySelector("#count").textContent = count;
       document.querySelector("#count2").textContent = count;

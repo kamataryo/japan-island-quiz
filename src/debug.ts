@@ -149,6 +149,7 @@ function recompute() {
       id: "all",
       name: "（すべての島を表示）",
       count: 0,
+      kind: "band",
       questions: islands,
       choices: islands,
     },
