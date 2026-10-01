@@ -5,10 +5,12 @@ import { appendInstallHint } from "./install-hint.ts";
 import {
   collapseAttribution,
   createMap,
+  focusIsland,
+  hideRecenter,
   showIsland,
   showPanHint,
 } from "./map.ts";
-import { pickChoices } from "./quiz/choices.ts";
+import { nameKey, pickChoices } from "./quiz/choices.ts";
 import { newSeed, pickQuestions, seededRng } from "./quiz/game.ts";
 import { isHard } from "./quiz/hard.ts";
 import {
@@ -228,13 +230,8 @@ async function main() {
   let map: Awaited<ReturnType<typeof createMap>>;
 
   /** 答え合わせで、指定した島へ地図を移す */
-  const jump = (x: Island) =>
-    showIsland(
-      map,
-      x,
-      questionBounds(x.bbox, () => 0.5),
-      !reduceMotion.matches,
-    );
+  const jump = (x: Island, mode: Mode) =>
+    focusIsland(map, x, !reduceMotion.matches, !!mode.fill);
 
   const { bands, areas } = buildModes(islands);
   const modes = [...bands, ...areas];
@@ -261,7 +258,7 @@ async function main() {
       <ul class="choices">${buttons(bands)}</ul>
       <h2 class="mode-heading">地域で遊ぶ</h2>
       <ul class="choices">${buttons(areas)}</ul>
-      <p class="caption retro">数字キー 1〜${modes.length} でも選べます。</p>
+      <p class="caption retro keys-hint">数字キー 1〜${modes.length} でも選べます。</p>
       <p class="caption">島のデータ: <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">© OpenStreetMap contributors${newTab}</a>（ODbL）・Wikidata</p>`;
     for (const b of panel.querySelectorAll<HTMLButtonElement>("[data-mode]")) {
       b.addEventListener("click", () => play(modes[Number(b.dataset.mode)]));
@@ -313,11 +310,14 @@ async function main() {
     $("#challenge").focus();
   }
 
-  /** seed が同じなら同じ問題・選択肢・地図の位置になる。rival は挑戦したときの相手の得点 */
+  /** seed が同じなら同じ問題・選択肢になる。rival は挑戦したときの相手の得点 */
   async function play(mode: Mode, seed = newSeed(), rival?: number) {
     mapEl.hidden = false;
     if (!map) {
       panel.innerHTML = `<p>読み込み中…</p>`;
+      // 作った直後は開始位置の地図が描かれ、最初の島へ移るときにチラつくので、島を描くまで隠す
+      // （hidden だと大きさが 0 になり、島へ寄せるズームを測れない）
+      mapEl.style.visibility = "hidden";
       try {
         map = await createMap(mapEl);
         window.__map = map;
@@ -325,6 +325,10 @@ async function main() {
         fail(e);
         return;
       }
+      // この後 ask(0) で島へ移ってから最初に描いたときに見せる
+      map.once("render", () => {
+        mapEl.style.visibility = "";
+      });
     }
     home.hidden = false;
     // 隠している間は大きさが 0 なので測り直す
@@ -337,6 +341,8 @@ async function main() {
       mode.weight,
     );
     const answers: Answer[] = [];
+    // 前の問題が消去法の手がかりにならないよう、このゲームで出題・選択肢に使った名前は選択肢に出さない
+    const used = new Set(questions.map((x) => nameKey(x.name)));
     // 読むのは開始時点の値なので、ゲーム中に他の人が答えた分は反映されない
     const stats = fetchStats(questions);
     // 読み終わっていれば、出題の読み上げに「難問」を入れられるよう手元に置く
@@ -347,20 +353,25 @@ async function main() {
 
     const ask = (q: number) => {
       const island = questions[q];
-      const rng = seededRng(seed, q + 1);
-      const choices = pickChoices(island, mode.choices, rng);
+      // used は前の問題の選択肢で決まり、それもシードで決まるので、同じシードなら同じ選択肢になる
+      const choices = pickChoices(
+        island,
+        mode.choices.filter((x) => !used.has(nameKey(x.name))),
+        seededRng(seed, q + 1),
+      );
+      for (const c of choices) used.add(nameKey(c.name));
       const status = `${q + 1} / ${questions.length} 問目`;
       const showProgress = () => {
         // スマホ幅でもタイトルと1行に収まるよう詰める。区切りを「・」にすると「伊豆・小笠原」と紛れるので空白にする
         progress.textContent = `${q + 1}/${questions.length}問 ${mode.name} 正解 ${answers.filter((a) => a.choice === a.island).length}`;
       };
       showProgress();
-      // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
-      showIsland(map, island, questionBounds(island.bbox, rng), false);
-      // 出題の移動より後に出す（移動で消えないように）
-      if (q === 0) showPanHint(map);
+      const last = q + 1 >= questions.length;
+      const feedback = () => `
+          <p class="next"><button class="btn retro" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>
+          <div id="viewing">${viewing(island)}</div>`;
       panel.innerHTML = `
-        <h2 class="prompt">太い線で囲まれた島はどれ？<span id="hard" class="hard retro" hidden>難問！</span></h2>
+        <h2 class="prompt" tabindex="-1">太い線で囲まれた島はどれ？<span id="hard" class="hard retro" hidden>難問！</span></h2>
         <p id="rate" class="caption"></p>
         <ul class="choices">
           ${choices
@@ -372,7 +383,13 @@ async function main() {
             )
             .join("")}
         </ul>
-        <div id="feedback"></div>`;
+        <div id="feedback" class="reserve" aria-hidden="true">${feedback()}</div>`;
+      // 地図はパネルの残りの高さに広がるので、パネルを描いてから大きさを測り直して寄せる
+      map.resize();
+      // 出題時は動かさずに切り替える。移動の向きが場所のヒントになり、途中の経路のタイルまで読み込んでしまうため
+      focusIsland(map, island, false, !!mode.fill);
+      // 出題の移動より後に出す（移動で消えないように）
+      if (q === 0) showPanHint(map);
       const buttons = [
         ...panel.querySelectorAll<HTMLButtonElement>("[data-index]"),
       ];
@@ -386,7 +403,10 @@ async function main() {
       }
       // 前の問題でスクロールしていても、先頭（タイトルバーの進捗）から見せる
       scrollTo(0, 0);
-      buttons[0]?.focus({ preventScroll: true });
+      // 選択肢ではなく問題文に置く（Enter の押しすぎで選択肢1を選ばないように。Tab で選択肢へ進める）
+      panel
+        .querySelector<HTMLElement>(".prompt")
+        ?.focus({ preventScroll: true });
       // 最初の問題では集計がまだ届いていないことがある。そのときは読み上げず、見出しの「難問！」だけで伝える
       const hardNow = isHard(statsNow?.get(island.id));
       announce(
@@ -403,7 +423,7 @@ async function main() {
 
       /** 回答後に選択肢を押すと、その島へ移動して詳しく見られる（誤答も学びに使う） */
       const review = (c: Island) => {
-        jump(c);
+        jump(c, mode);
         buttons.forEach((b, i) => {
           b.setAttribute("aria-pressed", String(choices[i] === c));
         });
@@ -429,16 +449,17 @@ async function main() {
             ` <small class="mark">${mark}</small>`,
           );
         });
-        const head = correct ? "○ 正解！" : `× 不正解… 正解は ${island.name}`;
-        const last = q + 1 >= questions.length;
-        $("#feedback").innerHTML = `
-          <p class="next"><button class="btn retro" type="button" id="next">${last ? "結果を見る ▶" : "次の問題へ ▶"}</button></p>
-          <div id="viewing">${viewing(island)}</div>`;
+        const fb = $("#feedback");
+        fb.classList.remove("reserve");
+        fb.removeAttribute("aria-hidden");
+        fb.innerHTML = feedback();
         record(island, correct);
         const next = $("#next");
         next.addEventListener("click", () => (last ? result() : ask(q + 1)));
         next.focus();
-        announce(`${head}。${island.name}、${describe(island)}`);
+        announce(
+          `${correct ? "○ 正解！" : "× 不正解… 正解は "}${island.name}、${describe(island)}`,
+        );
       };
     };
 
@@ -446,6 +467,7 @@ async function main() {
       const score = answers.filter((a) => a.choice === a.island).length;
       progress.textContent = `結果・${mode.name}`;
       recordPlay(mode.name, score, answers.length);
+      hideRecenter(map);
       // 「難易度を選ぶ」ボタンと役割が重なるので出さない
       home.hidden = true;
       // 島名を押すと、その島へ地図を移す
@@ -496,7 +518,12 @@ async function main() {
       )) {
         b.addEventListener("click", () => {
           const x = shown[Number(b.dataset.show)];
-          jump(x);
+          showIsland(
+            map,
+            x,
+            questionBounds(x.bbox, () => 0.5),
+            !reduceMotion.matches,
+          );
           // スマホでは表を下へ読み進めると地図が画面の外に出ているので戻す
           mapEl.scrollIntoView({
             behavior: reduceMotion.matches ? "auto" : "smooth",
@@ -549,7 +576,9 @@ async function main() {
 
 // 数字キー 1〜9 で、パネル内の対応するボタンを押す
 document.addEventListener("keydown", (e) => {
-  if (e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key)) return;
+  // 押しっぱなしの連続入力は無視する（難易度を選んだキーがそのまま1問目の回答にならないように）
+  if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || !/^[1-9]$/.test(e.key))
+    return;
   if ((e.target as HTMLElement).closest("input, textarea, select")) return;
   const button = panel.querySelector<HTMLButtonElement>(
     `[data-key="${e.key}"]`,

@@ -27,7 +27,10 @@
   }
 }
 
-/* 地図の高さ。スマホ幅では低くして、選択肢4つまで1画面に収める */
+/*
+ * 地図の最低の高さ。スマホ幅では低くして、選択肢4つまで1画面に収める。
+ * 画面に余りがあれば、地図がその分まで伸びる（下部パネルは出題時から答え合わせの欄の高さを取ってあるので、回答しても地図は縮まない）
+ */
 :root {
   --map-h: max(55dvh, 14rem);
 }
@@ -39,7 +42,12 @@
 }
 
 .app__map {
-  height: var(--map-h);
+  flex: 1 0 var(--map-h);
+}
+
+/* 答え合わせの欄の高さを出題時から取っておく（中身は正解の島なので見せない） */
+.reserve {
+  visibility: hidden;
 }
 
 .app__map[hidden] {
@@ -64,6 +72,11 @@
 
 .app__panel {
   flex: 1;
+}
+
+/* 地図を出している間は、余った高さを地図に回す */
+.app__map:not([hidden]) ~ .app__panel {
+  flex: none;
 }
 
 .app__panel h2 {
@@ -318,6 +331,8 @@
 }
 
 .maplibregl-ctrl-group button {
+  /* 連打がブラウザのダブルタップ拡大にならないように */
+  touch-action: manipulation;
   width: var(--tap);
   height: var(--tap);
   box-shadow:
@@ -340,6 +355,13 @@
   box-shadow: none;
   outline: 3px solid var(--c-focus);
   outline-offset: -3px;
+}
+
+/* 島の位置へ戻るボタン（島が画面の外に出たときだけ出る） */
+.maplibregl-ctrl-group button.recenter {
+  display: grid;
+  place-items: center;
+  color: var(--c-ink);
 }
 
 .maplibregl-ctrl button .maplibregl-ctrl-icon {

@@ -8,7 +8,7 @@ import {
   stripSuffix,
 } from "./choices.ts";
 import { inPolygon, islandsIn, pickQuestions } from "./game.ts";
-import { questionBounds } from "./zoom.ts";
+import { fillZoom, fitZoom, questionBounds, questionZoom } from "./zoom.ts";
 
 /** 固定シードの乱数。小さいシードのままだと最初の値がどれも 0 に近くなるので、散らしてから使う */
 function rng(seed = 1) {
@@ -26,6 +26,7 @@ function island(p: Partial<Island>): Island {
     id: `w${n}`,
     name: `島${n}`,
     areaKm2: 1,
+    hullKm2: 1,
     bbox: [135, 35, 135.01, 35.01],
     center: [135.005, 35.005],
     sitelinks: 0,
@@ -227,5 +228,33 @@ describe("questionBounds", () => {
       expect(nn).toBeGreaterThanOrEqual(bbox[3]);
       expect((nn - s) * 111.32).toBeGreaterThanOrEqual(40);
     }
+  });
+});
+
+describe("questionZoom", () => {
+  it("島が2倍の大きさなら1段引き、マーカーがちょうど消える", () => {
+    const z = questionZoom([-0.01, -0.01, 0.01, 0.01], 16);
+    expect(questionZoom([-0.02, -0.02, 0.02, 0.02], 16)).toBeCloseTo(z - 1, 3);
+    // 赤道付近で外接円の半径は 0.01° の √2 倍。ズーム z で 16px を少し超える
+    const r = 512 * 2 ** z * Math.hypot(0.01 / 360, 0.01 / 360);
+    expect(r).toBeGreaterThan(16);
+    expect(r).toBeLessThan(17);
+  });
+});
+
+describe("fillZoom", () => {
+  it("面積が4倍なら1段引き、赤道で1km²が画面の1/3を占める", () => {
+    const z = fillZoom(1, 0, 600 * 400, 1 / 3);
+    expect(fillZoom(4, 0, 600 * 400, 1 / 3)).toBeCloseTo(z - 1, 6);
+    const mPerPx = 40_075_016.686 / (512 * 2 ** z);
+    expect(1e6 / mPerPx ** 2 / (600 * 400)).toBeCloseTo(1 / 3, 6);
+  });
+});
+
+describe("fitZoom", () => {
+  it("中心から遠い側の辺が画面の端（余白を除く）にちょうど届く", () => {
+    // 赤道付近、中心の東に 0.02°・西に 0.01°。横 600px・余白 16px なので東端まで 284px
+    const z = fitZoom([-0.01, -0.001, 0.02, 0.001], [0, 0], 600, 400, 16);
+    expect((0.02 / 360) * 512 * 2 ** z).toBeCloseTo(284, 6);
   });
 });

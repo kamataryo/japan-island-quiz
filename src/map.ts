@@ -2,6 +2,7 @@ import {
   addProtocol,
   type FilterSpecification,
   type GeoJSONSource,
+  type IControl,
   type LngLatBoundsLike,
   Map as MapLibreMap,
   NavigationControl,
@@ -14,6 +15,7 @@ import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import { Protocol } from "pmtiles";
 import type { Island } from "../scripts/data/pipeline.ts";
 import { gsiToTerrarium } from "./dem.ts";
+import { fillZoom, fitZoom, questionZoom } from "./quiz/zoom.ts";
 import { TILES_VERSION } from "./tiles-version.ts";
 
 // MapLibre v6 は Worker を本体と同じ場所から import.meta.url 基準で読むが、
@@ -48,6 +50,14 @@ addProtocol("gsidem", async ({ url }, { signal }) => {
 
 /** マーカー（赤い円）の半径 px。島の外接円がこれより小さく写るときだけ表示する */
 const MARKER_RADIUS = 16;
+/** 出題時はこれより引かない（縮尺が 50km 前後。引きすぎると島が小さくなりすぎる）。ただし島全体が収まらないときは収まるまで引く */
+const MIN_QUESTION_ZOOM = 7;
+/** 寄せるときは、凸包が画面の FILL_SHARE を占めるまで寄せる */
+const FILL_SHARE = 1 / 16;
+/** 寄せるときも、島の幅・高さが画面の 1/SPAN_DIV を超えない（細長い島が横に広がりすぎないように） */
+const SPAN_DIV = 3;
+/** 寄せるときも島全体が画面に収まるよう、四辺に残す余白 px */
+const FIT_PADDING = 16;
 /** これより引くと、データのある範囲（日本周辺）の端が見えてしまう */
 const MIN_ZOOM = 5;
 
@@ -276,6 +286,24 @@ export function createMap(container: HTMLElement): Promise<MapLibreMap> {
   map.touchZoomRotate.disableRotation();
   // 地図を動かせることに気づいてもらうため、＋−ボタンを常に出す
   map.addControl(new NavigationControl({ showCompass: false }));
+  // zoomIn/zoomOut は「今のズーム ±1」へ動くので、アニメーション中に連打すると途中の値からの ±1 になり
+  // 押した回数ほど寄らない。動いている間は、前に押した行き先から動かす。
+  // 1段ずつだと場所が分かるまで何度も押すことになるので、1回で2段ずつ動かす
+  let goal: number | undefined;
+  map.on("moveend", () => {
+    goal = undefined;
+  });
+  const step = (d: number) => {
+    goal = Math.min(
+      Math.max((goal ?? map.getZoom()) + d, map.getMinZoom()),
+      map.getMaxZoom(),
+    );
+    return goal;
+  };
+  map.zoomIn = (options, eventData) => map.zoomTo(step(2), options, eventData);
+  map.zoomOut = (options, eventData) =>
+    map.zoomTo(step(-2), options, eventData);
+  map.addControl(recenter);
   map.addControl(new ScaleControl(), "bottom-left");
   map.getCanvas().tabIndex = -1;
   map.on("error", (e) => console.error(e.error));
@@ -356,12 +384,42 @@ function updateMarker(map: MapLibreMap) {
   );
 }
 
-export function showIsland(
-  map: MapLibreMap,
-  island: Island,
-  bounds: LngLatBoundsLike,
-  animate: boolean,
-): void {
+/** 出題中の島の最初の表示。島が画面の外に出たら、＋−の下のボタンでここへ戻す */
+let home: { center: [number, number]; zoom: number } | undefined;
+
+const recenter = new (class implements IControl {
+  el = document.createElement("div");
+  onAdd(map: MapLibreMap) {
+    this.el.className = "maplibregl-ctrl maplibregl-ctrl-group";
+    this.el.hidden = true;
+    this.el.innerHTML = `<button type="button" class="recenter" aria-label="島の位置へ戻る" title="島の位置へ戻る"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button>`;
+    // 出題時と同じく動かさずに戻す（経路のタイルを読まないように）
+    this.el.firstElementChild?.addEventListener("click", () => {
+      if (home) map.jumpTo(home);
+    });
+    map.on("move", () => this.update(map));
+    return this.el;
+  }
+  onRemove() {
+    this.el.remove();
+  }
+  /** 島の bbox が画面に少しでも入っていれば隠す */
+  update(map: MapLibreMap) {
+    let away = false;
+    if (home && target) {
+      const [w, s, e, n] = target.bbox;
+      const b = map.getBounds();
+      away =
+        e < b.getWest() ||
+        w > b.getEast() ||
+        n < b.getSouth() ||
+        s > b.getNorth();
+    }
+    this.el.hidden = !away;
+  }
+})();
+
+function highlight(map: MapLibreMap, island: Island) {
   const filter: FilterSpecification = ["==", ["get", "id"], island.id];
   map.setFilter("target-fill", filter);
   map.setFilter("target-casing", filter);
@@ -369,5 +427,63 @@ export function showIsland(
   if (!target) map.on("zoom", () => updateMarker(map));
   target = island;
   updateMarker(map);
+}
+
+/**
+ * 出題中・答え合わせの表示。島の代表点を中心に、マーカーがちょうど消える大きさまで寄せる（ズーム7より引かない。島全体が収まらないときは収まるまで引く）。
+ * fill のとき（むずい・おにモード）は、凸包が画面の 1/16 を占めるまで寄せる（島の幅・高さが画面の 1/3 以内・最大ズームまで。マーカーが消える大きさより引かない）。
+ * 島が画面の外に出たら、ここへ戻るボタンを出す
+ */
+export function focusIsland(
+  map: MapLibreMap,
+  island: Island,
+  animate: boolean,
+  fill: boolean,
+): void {
+  const { clientWidth: w, clientHeight: h } = map.getContainer();
+  const fit = fitZoom(island.bbox, island.center, w, h, FIT_PADDING);
+  let zoom = Math.max(
+    questionZoom(island.bbox, MARKER_RADIUS),
+    Math.min(MIN_QUESTION_ZOOM, fit),
+  );
+  if (fill) {
+    // hullKm2 のない古い islands.json では面積で代える（凸包より小さいので少し寄りすぎる）
+    const hull = island.hullKm2 ?? island.areaKm2;
+    const [west, s, e, n] = island.bbox;
+    const span = fitZoom(
+      island.bbox,
+      [(west + e) / 2, (s + n) / 2],
+      w / SPAN_DIV,
+      h / SPAN_DIV,
+      0,
+    );
+    const fill = Math.min(
+      fillZoom(hull, island.center[1], w * h, FILL_SHARE),
+      span,
+    );
+    zoom = Math.max(zoom, fill);
+  }
+  home = { center: island.center, zoom: Math.min(zoom, map.getMaxZoom()) };
+  highlight(map, island);
+  map.easeTo({ ...home, duration: animate ? 800 : 0 });
+  recenter.update(map);
+}
+
+/** 結果画面の表示。戻るボタンは出さない */
+export function showIsland(
+  map: MapLibreMap,
+  island: Island,
+  bounds: LngLatBoundsLike,
+  animate: boolean,
+): void {
+  home = undefined;
+  recenter.update(map);
+  highlight(map, island);
   map.fitBounds(bounds, { padding: 16, duration: animate ? 800 : 0 });
+}
+
+/** 結果画面に移るときに、戻るボタンを消す */
+export function hideRecenter(map: MapLibreMap): void {
+  home = undefined;
+  recenter.update(map);
 }
