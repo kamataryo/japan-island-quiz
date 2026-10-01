@@ -505,7 +505,7 @@ async function main() {
         </p>
         <p class="share-text" id="share-box" hidden>
           <label for="share-text">シェアする文</label>
-          <textarea id="share-text" readonly></textarea>
+          <textarea id="share-text" inputmode="none" aria-readonly="true" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
         </p>
         <div class="table-wrap">
           <table class="result-table">
@@ -566,10 +566,17 @@ async function main() {
       const text = shareText(mode, results, rival?.score);
       const url = shareUrl(location.href, mode, results, seed);
       const shared = `${text}\n${url}`;
+      // 書き換えられないようにしつつ、一部を選べるようカーソルは出したい。iOS Safari は readonly だとカーソルを出さないので、
+      // readonly にはせず、inputmode="none" でソフトキーボードを出さず、書き換えは beforeinput で止める
+      const area = $<HTMLTextAreaElement>("#share-text");
+      area.addEventListener("beforeinput", (e) => e.preventDefault());
+      // IME の変換中の入力は beforeinput で止められないことがあるので、書き換わったら戻す
+      area.addEventListener("input", () => {
+        if (area.value !== shared) area.value = shared;
+      });
       $("#share").addEventListener("click", async () => {
         // 送り先によって文やリンクが落ちることがあり、リンクだけ欲しい人もいるので、シェアする文をそのまま見せる。
-        // フォーカスは移さない（iOS でキーボードが出たり画面が飛んだりするため）
-        const area = $<HTMLTextAreaElement>("#share-text");
+        // フォーカスは移さない（押したボタンの「コピーしました」が読み上げられるように）
         area.value = shared;
         $("#share-box").hidden = false;
         // 高さを中身に合わせる（URL は折り返すので行数では決まらない）。field-sizing に対応したブラウザは CSS で合わせる
