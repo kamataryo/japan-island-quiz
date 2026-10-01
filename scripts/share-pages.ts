@@ -15,6 +15,8 @@ export function sharePage(mode: ModeDef, score: number): string {
   const title = scoreTitle(mode, score, mode.count);
   const description = `同じ${mode.count}問に挑戦してみよう。地図を見て、ハイライトされた島の名前を4択で当てるクイズ。`;
   const image = new URL(ogpPath(mode.id, score), SITE_URL).toString();
+  // ?seed= を外した URL にして、プレビューのキャッシュを得点ごとに1つにまとめる
+  const url = new URL(sharePath(mode.id, score), SITE_URL).toString();
   // s/{モード}/{得点}/ からサイトの根へ。シードはシェアした URL の ?seed= をそのまま渡す
   const top = "../../../";
   const params = `mode=${encodeURIComponent(mode.id)}&score=${score}`;
@@ -27,6 +29,7 @@ export function sharePage(mode: ModeDef, score: number): string {
     <meta name="description" content="${esc(description)}" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="日本の島クイズ" />
+    <meta property="og:url" content="${esc(url)}" />
     <meta property="og:title" content="${esc(title)}" />
     <meta property="og:description" content="${esc(description)}" />
     <meta property="og:image" content="${esc(image)}" />
