@@ -4,7 +4,7 @@ import type { Island } from "../../scripts/data/pipeline.ts";
 import { sharePage } from "../../scripts/share-pages.ts";
 import { pickChoices } from "./choices.ts";
 import { formatSeed, parseSeed, pickQuestions, seededRng } from "./game.ts";
-import { MODE_DEFS, modeById, modeDef } from "./mode-defs.ts";
+import { MODE_DEFS, modeById, modeDef, modeLabel } from "./mode-defs.ts";
 import { buildModes } from "./modes.ts";
 import { parseChallenge, shareText, shareUrl, versus } from "./share.ts";
 
@@ -73,8 +73,18 @@ describe("モードの定義", () => {
   });
 
   it("出題数は config で変えられ、なければ10問", () => {
-    expect(modeDef({ id: "a", name: "A" }).count).toBe(10);
-    expect(modeDef({ id: "a", name: "A", questions: 20 }).count).toBe(20);
+    expect(modeDef({ id: "a", name: "A" }, "band").count).toBe(10);
+    expect(modeDef({ id: "a", name: "A", questions: 20 }, "band").count).toBe(
+      20,
+    );
+  });
+
+  it("結果に出すモード名には、難易度か地域かを添える", () => {
+    expect(modeLabel(MODE_DEFS[0])).toMatch(/^難易度：/);
+    expect(modeLabel(MODE_DEFS[MODE_DEFS.length - 1])).toMatch(/^地域：/);
+    expect(modeLabel(modeDef({ id: "a", name: "瀬戸内" }, "region"))).toBe(
+      "地域：瀬戸内",
+    );
   });
 });
 

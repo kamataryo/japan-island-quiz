@@ -28,7 +28,7 @@ export function buildModes(islands: Island[]): {
   // 選んだ帯を主に、それより易しい帯も mix の割合で混ぜる
   // （帯ごとの島数の差を打ち消すよう、割合を島数で割って1島あたりの重みにする）
   const bands: Mode[] = config.bands.map((b, i) => ({
-    ...modeDef(b),
+    ...modeDef(b, "band"),
     questions: islands.filter((x) => (b.mix[x.band] ?? 0) > 0),
     choices: islands,
     weight: (x) => b.mix[x.band] / counts[x.band],
@@ -51,7 +51,7 @@ export function buildModes(islands: Island[]): {
       ((r.oniShare / (1 - r.oniShare)) * restW) / oniW || 1,
     );
     return {
-      ...modeDef(r),
+      ...modeDef(r, "region"),
       questions: xs,
       choices: xs,
       weight: (x) => base(x) * (x.band === oni ? k : 1),

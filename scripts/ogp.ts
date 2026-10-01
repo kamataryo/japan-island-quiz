@@ -12,7 +12,7 @@ import { mkdir, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { chromium } from "playwright-core";
-import { MODE_DEFS } from "../src/quiz/mode-defs.ts";
+import { MODE_DEFS, modeLabel } from "../src/quiz/mode-defs.ts";
 import { ogpPath } from "../src/quiz/share.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -38,7 +38,7 @@ try {
       // 地域モードは、その地域の島の背景（pnpm ogp:bg で作る）があれば使う
       const bg = `ogp-bg/${mode.id}.png`;
       url.search = new URLSearchParams({
-        mode: mode.name,
+        mode: modeLabel(mode),
         score: String(score),
         count: String(mode.count),
         ...(existsSync(join(root, "scripts", bg)) ? { bg } : {}),

@@ -13,6 +13,7 @@ import {
 import { nameKey, pickChoices } from "./quiz/choices.ts";
 import { newSeed, pickQuestions, seededRng } from "./quiz/game.ts";
 import { isHard } from "./quiz/hard.ts";
+import { modeLabel } from "./quiz/mode-defs.ts";
 import {
   GAUGE_CELLS,
   gaugeFilled,
@@ -481,7 +482,8 @@ async function main() {
 
     const result = () => {
       const score = answers.filter((a) => a.choice === a.island).length;
-      progress.textContent = `結果・${mode.name}`;
+      // モード名をここに続けると成績のように読めるので、本文の得点の上に「難易度：おに」と出す
+      progress.textContent = "結果";
       recordPlay(mode.name, score, answers.length);
       hideRecenter(map);
       // 「難易度を選ぶ」ボタンと役割が重なるので出さない
@@ -494,6 +496,7 @@ async function main() {
       const show = (x: Island) =>
         `<button class="link-btn" type="button" data-show="${shown.push(x) - 1}">${esc(x.name)}</button>`;
       panel.innerHTML = `
+        <p class="result-mode retro">${esc(modeLabel(mode))}</p>
         <h2 tabindex="-1" id="result">${score} / ${answers.length} 問正解</h2>
         ${rival === undefined ? "" : `<p class="versus retro">挑戦相手 ${rival.score} 問・あなた ${score} 問　${versus(score, rival.score)}</p>`}
         <p class="row">
@@ -582,7 +585,7 @@ async function main() {
       appendInstallHint(panel);
       $("#result").focus();
       announce(
-        `結果は ${answers.length} 問中 ${score} 問正解です${rival === undefined ? "" : `。挑戦相手は ${rival.score} 問。${versus(score, rival.score)}`}`,
+        `${modeLabel(mode)}。結果は ${answers.length} 問中 ${score} 問正解です${rival === undefined ? "" : `。挑戦相手は ${rival.score} 問。${versus(score, rival.score)}`}`,
       );
     };
 
