@@ -50,7 +50,18 @@ export function sharePage(mode: ModeDef, score: number): string {
 export function sharePages(): Plugin {
   return {
     name: "share-pages",
-    apply: "build",
+    // 開発サーバーでも同じページを返す（シェアのリンクから挑戦画面へ移るのを確かめるため）
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const path = new URL(req.url ?? "/", "http://localhost").pathname;
+        const m = /^\/s\/([^/]+)\/(\d+)\/$/.exec(path);
+        const mode = m && MODE_DEFS.find((d) => d.id === m[1]);
+        const score = Number(m?.[2]);
+        if (!mode || score > mode.count) return next();
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        res.end(sharePage(mode, score));
+      });
+    },
     generateBundle() {
       for (const mode of MODE_DEFS) {
         for (let score = 0; score <= mode.count; score++) {
