@@ -247,6 +247,32 @@
   justify-content: flex-end;
 }
 
+/* 「結果をシェア」を押すと出す、シェアする文。リンクだけを選んでコピーすることもできる */
+.share-text label {
+  display: block;
+  color: var(--c-ink-sub);
+  font-size: 0.875rem;
+}
+
+.share-text textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 0.5rem;
+  border: 2px solid var(--c-btn-dark);
+  border-radius: 0;
+  background: var(--c-paper);
+  color: var(--c-ink);
+  /* 16px 未満だと iOS で選んだときに画面が拡大される */
+  font: inherit;
+  font-size: max(1rem, 16px);
+  line-height: 1.5;
+  /* URL が長くても横にはみ出さない */
+  overflow-wrap: anywhere;
+  /* 高さを中身に合わせる（対応していないブラウザは main.ts で合わせる） */
+  field-sizing: content;
+  resize: vertical;
+}
+
 /* シェアされた問題に挑戦したときの、相手との得点の比べ */
 .versus {
   display: inline-block;
