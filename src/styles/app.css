@@ -377,7 +377,8 @@
 
 /*
  * 初回だけ出す「地図を動かせます」の案内。島は地図の中央に来るので、空いている左上に置く
- * （右上は＋−ボタン）。背景を少し透かして地図の上に重なっていることを見せる。
+ * （右上は縮尺。最大幅 100px と両側の余白 10px・影 4px を空ける。幅 320px の画面でも語の途中で折り返さない）。
+ * 背景を少し透かして地図の上に重なっていることを見せる。
  * 地図の色はどれも明るいので、透かしても文字のコントラストは 10:1 以上ある
  */
 .pan-hint {
@@ -385,7 +386,7 @@
   top: 10px;
   left: 10px;
   z-index: 2;
-  max-width: calc(100% - var(--tap) - 40px);
+  max-width: calc(100% - 124px);
   padding: 0.5rem 1rem;
   border: 2px solid var(--c-btn-dark);
   background: color-mix(in srgb, var(--c-paper) 85%, transparent);
