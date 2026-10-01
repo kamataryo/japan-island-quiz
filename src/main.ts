@@ -500,6 +500,10 @@ async function main() {
           <button class="btn retro" type="button" id="share">${canShare ? "結果をシェア" : "結果をコピー"}</button>
           <span class="caption">同じ${answers.length}問に挑戦できるリンクが付きます。</span>
         </p>
+        <p class="share-text" id="share-box" hidden>
+          <label for="share-text">シェアする文</label>
+          <textarea id="share-text" readonly></textarea>
+        </p>
         <div class="table-wrap">
           <table class="result-table">
             <thead>
@@ -558,14 +562,25 @@ async function main() {
       const results = answers.map((a) => a.choice === a.island);
       const text = shareText(mode, results, rival?.score);
       const url = shareUrl(location.href, mode, results, seed);
+      const shared = `${text}\n${url}`;
       $("#share").addEventListener("click", async () => {
+        // 送り先によって文やリンクが落ちることがあり、リンクだけ欲しい人もいるので、シェアする文をそのまま見せる。
+        // フォーカスは移さない（iOS でキーボードが出たり画面が飛んだりするため）
+        const area = $<HTMLTextAreaElement>("#share-text");
+        area.value = shared;
+        $("#share-box").hidden = false;
+        // 高さを中身に合わせる（URL は折り返すので行数では決まらない）。field-sizing に対応したブラウザは CSS で合わせる
+        if (!CSS.supports("field-sizing", "content")) {
+          area.style.height = "auto";
+          area.style.height = `${area.scrollHeight + area.offsetHeight - area.clientHeight}px`;
+        }
         if (canShare) {
           // 共有画面を閉じたとき（AbortError）も含めて、失敗は知らせない
           await navigator.share({ text, url }).catch(() => {});
           return;
         }
         try {
-          await navigator.clipboard.writeText(`${text}\n${url}`);
+          await navigator.clipboard.writeText(shared);
           announce("結果とリンクをコピーしました");
           const b = $("#share");
           b.textContent = "コピーしました";
